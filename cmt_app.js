@@ -1,4 +1,4 @@
-﻿// Part Assessment ↔ 1st Screen 연결
+// Part Assessment ↔ 1st Screen 연결
 const PART_PARENT = {
   part_shoulder_upper:'shoulder_upper',
   part_shoulder_lower:'shoulder_lower',
@@ -13,10 +13,24 @@ function getParentScreen(screen) {
   return pid ? SCREENS.find(s => s.id === pid) : null;
 }
 
+/** GitHub Pages(/eva/)·로컬 모두 동작하도록 상대 경로 → 절대 URL */
+function assetUrl(rel) {
+  if (!rel || /^https?:\/\//i.test(rel)) return rel;
+  const path = location.pathname || '/';
+  const dir = path.endsWith('.html')
+    ? path.replace(/[^/]+$/, '')
+    : (path.endsWith('/') ? path : `${path}/`);
+  return new URL(rel, `${location.origin}${dir}`).href;
+}
+
 function getScreenPhotos(screen) {
-  if (screen.photos && screen.photos.length) return screen.photos;
-  const parent = getParentScreen(screen);
-  return parent && parent.photos ? parent.photos : [];
+  let photos = [];
+  if (screen.photos && screen.photos.length) photos = screen.photos;
+  else {
+    const parent = getParentScreen(screen);
+    if (parent && parent.photos) photos = parent.photos;
+  }
+  return photos.map((p) => ({ ...p, src: assetUrl(p.src) }));
 }
 
 function blockTitle(num, text) {
