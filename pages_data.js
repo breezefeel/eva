@@ -1,0 +1,881 @@
+const SCREENS = [
+  {
+    "id": "shoulder_upper",
+    "num": 1,
+    "label": "1. Shoulder Pattern — 위 패턴",
+    "badge": "1st Screen",
+    "purpose": "어깨의 Mobility 정도와 통증을 살펴본다.",
+    "photos": [
+      {
+        "src": "pptx_assets/cropped/slide15_img0.jpeg",
+        "cap": "▲ 위 패턴 — 측면/후면 관찰"
+      }
+    ],
+    "howto": [
+      {
+        "n": 1,
+        "t": "준비",
+        "txt": "바르게 선 자세, 발 붙이고 발가락 정면."
+      },
+      {
+        "n": 2,
+        "t": "위 패턴 (Rt)",
+        "txt": "오른팔을 빗질하듯 머리 위로 지나 왼쪽 견갑극에 닿도록. 반대팔은 아래로 반대쪽 견갑골 하각에 닿도록."
+      },
+      {
+        "n": 3,
+        "t": "아래 패턴",
+        "txt": "반대로도 시행 (Rt 아래 패턴)."
+      }
+    ],
+    "normal_txt": "양 방향 모두 반대 편 견갑골 견갑극 / 하각에 손이 닿으면 .",
+    "normal_tags": [
+      "견갑극/하각 닿음"
+    ],
+    "compensations": [
+      "머리의 위치 변화 – 굽힘 , 회전",
+      "반대 측 어깨 올림",
+      "흉부의 회전 , 과도한 흉추 신전",
+      "요측 변위 (Radial-deviation )",
+      "익상 견갑골 ( W inging scapular )"
+    ],
+    "cautions": [
+      "치료사는 측면 / 후면에서 관찰한다"
+    ],
+    "hasCm": true,
+    "notes_placeholder": "Note — 보상작용, 특이사항...",
+    "next_if_normal": "shoulder_lower",
+    "next_if_issue": "part_shoulder_upper"
+  },
+  {
+    "id": "shoulder_lower",
+    "num": 2,
+    "label": "1. Shoulder Pattern — 아래 패턴",
+    "badge": "1st Screen",
+    "purpose": "어깨 Mobility — 아래 패턴 평가.",
+    "photos": [
+      {
+        "src": "pptx_assets/cropped/slide15_img0.jpeg",
+        "cap": "▲ 아래 패턴 시행"
+      }
+    ],
+    "howto": [
+      {
+        "n": 1,
+        "t": "단계 1",
+        "txt": "바르게 선 자세에서 발을 붙이고 발가락은 정면을 향하도록 한다 ."
+      },
+      {
+        "n": 2,
+        "t": "단계 2",
+        "txt": "환자에게 오른팔을 빗질하듯 머리 위로 지나 왼쪽 견갑극에 닿도록 지시 . ( Rt 위 패턴 ) 동시에 반대측 팔은 아래로 가게 하여 반대쪽 견갑골 하각에 닿도록 지시한다 ."
+      },
+      {
+        "n": 3,
+        "t": "단계 3",
+        "txt": "반대로도 시행한다 .( Rt 아래 패턴 )"
+      }
+    ],
+    "normal_txt": "반대편 견갑골 하각에 손이 닿으면.",
+    "normal_tags": [
+      "하각 닿음"
+    ],
+    "compensations": [
+      "머리 위치 변화 — 굽힘, 회전",
+      "반대 측 어깨 올림",
+      "흉부 회전, 과도한 흉추 신전",
+      "요측 변위",
+      "익상 견갑골"
+    ],
+    "hasCm": true,
+    "notes_placeholder": "Note...",
+    "next_if_normal": "spine_flex",
+    "next_if_issue": "part_shoulder_lower"
+  },
+  {
+    "id": "spine_flex",
+    "num": 3,
+    "label": "2. Multi-Segmental Flexion",
+    "badge": "1st Screen",
+    "purpose": "척추와 엉덩 관절의 굴곡 정도와 통증을 살펴본다.",
+    "photos": [
+      {
+        "src": "pptx_assets/cropped/slide16_img0.jpeg",
+        "cap": "▲ 경추 굴곡"
+      },
+      {
+        "src": "pptx_assets/cropped/slide16_img1.jpeg",
+        "cap": "▲ 흉추-골반 굴곡"
+      }
+    ],
+    "howto": [
+      {
+        "n": 1,
+        "t": "경추",
+        "txt": "바른 자세, 체간 유지, 턱을 몸통까지 붙인다."
+      },
+      {
+        "n": 2,
+        "t": "흉추-골반",
+        "txt": "무릎 구부리지 않고 봉이 바닥에 닿을 때까지 천천히 굽힌 후 복귀 (시선 발끝)."
+      }
+    ],
+    "normal_txt": "경추 : 턱이 몸통에 닿으면 . 흉추 - 골반 : 균일한 척추 곡선으로 바닥에 닿으면 . 후방으로 체중 이동이 일어나는가 ? 수직으로 부터 천추각이 최소 70 도가 되어야 한다 . 굽힘시 몸통이 틀어지면 Facet Jt 의 열림이 다름을 예측 가능 . Thoracic Hump 가 보일 경우 측만증 예측 가능 .",
+    "normal_tags": [
+      "턱이 몸통",
+      "천추각 70°"
+    ],
+    "compensations": [
+      "흉추 굴곡 / 하부 경추 에서 hinge",
+      "무 릎 굽힘"
+    ],
+    "cautions": [
+      "환자는 입을 벌리지 않고 검사한다",
+      "치료사는 환자의 정면 , 측면에서 움직임을 관찰한다",
+      "검사 시 신경학적 증상이 발현되면 신경학적 검사를 시행 한다"
+    ],
+    "hasCm": false,
+    "notes_placeholder": "Note...",
+    "next_if_normal": "spine_ext",
+    "next_if_issue": "part_spine_flex"
+  },
+  {
+    "id": "spine_ext",
+    "num": 4,
+    "label": "3. Multi-Segmental Extension",
+    "badge": "1st Screen",
+    "purpose": "척추와 엉덩 관절의 신전 정도와 통증을 살펴본다.",
+    "photos": [
+      {
+        "src": "pptx_assets/cropped/slide17_img0.jpeg",
+        "cap": "▲ 경추 신전"
+      },
+      {
+        "src": "pptx_assets/cropped/slide17_img1.jpeg",
+        "cap": "▲ 흉추-골반 신전"
+      }
+    ],
+    "howto": [
+      {
+        "n": 1,
+        "t": "경추",
+        "txt": "고개를 들어 시선 천장, 얼굴이 천정과 수평."
+      },
+      {
+        "n": 2,
+        "t": "흉추-골반",
+        "txt": "봉을 하늘로, 팔꿈치 신전·귀 선 유지. 엉덩 앞으로 밀며 척추 최대 신전."
+      }
+    ],
+    "normal_txt": "경추 : 부드러운 척추 곡선으로 얼굴 선이 수평에 10 도 이내이면 . 흉추 - 골반 : ASIS 가 발 끝과 같은 선상에 위치하고 , 견갑극이 뒤꿈치와 같은 선상에 위치하면 . 어깨관절의 완전 굽힘을 관찰 . 움직임 범위가 작을 경우 인체 전방선 근막의 단축 . 움직임 범위가 작을 경우 Abdominal m. & Iliopsoas tightness.",
+    "normal_tags": [
+      "견갑극/하각 닿음",
+      "ASIS=발끝",
+      "견갑극=뒤꿈치",
+      "뒤꿈치 접지"
+    ],
+    "compensations": [
+      "무릎 굽힘이 5 도 이상",
+      "흉곽 , 요추의 신전 / 머리의 변위"
+    ],
+    "hasCm": false,
+    "notes_placeholder": "Note...",
+    "next_if_normal": "spine_rot",
+    "next_if_issue": "part_spine_ext"
+  },
+  {
+    "id": "spine_rot",
+    "num": 5,
+    "label": "4. Multi-Segmental Rotation",
+    "badge": "1st Screen",
+    "purpose": "척추, 엉덩관절, 무릎 및 발의 회전 정도와 통증을 살펴본다.",
+    "photos": [
+      {
+        "src": "pptx_assets/cropped/slide18_img0.jpeg",
+        "cap": "▲ 경추 회전"
+      },
+      {
+        "src": "pptx_assets/cropped/slide18_img1.jpeg",
+        "cap": "▲ 흉추-골반 회전"
+      }
+    ],
+    "howto": [
+      {
+        "n": 1,
+        "t": "경추",
+        "txt": "봉을 어깨에 걸치고 팔꿈치 수직, 고개만 좌/우 끝까지."
+      },
+      {
+        "n": 2,
+        "t": "흉추-골반",
+        "txt": "몸통 전체를 좌·우 끝까지 회전."
+      }
+    ],
+    "normal_txt": "경추 : 코에서 수직인 선이 쇄골의 중앙을 지나면 . 흉추 - 골반 : 흉부 -50 도 , 골반 -50 의 각도가 나오면 . 분절의 제한과 과도한 움직임을 유심히 관찰한다 .",
+    "normal_tags": [
+      "흉부·골반 50°"
+    ],
+    "compensations": [
+      "경추 신전 및 측면 굽힘 , 어깨 올림",
+      "엉덩 관절 및 무릎 굴곡 , 척추 및 골반 변위",
+      "어깨 관절의 내밈 / 당김",
+      "발 - 발목 자세의 무너짐"
+    ],
+    "cautions": [
+      "환자는 입을 벌리지 않고 검사한다",
+      "치료사는 환자의 정면 , 측면 , 후면 에서 움직임을 관찰한다",
+      "검사 시 신경학적 증상이 발현되면 신경학적 검사를 시행하도록 한다",
+      "발의 위치가 변하지 않도록 한다"
+    ],
+    "hasCm": false,
+    "hasImpossible": false,
+    "notes_placeholder": "Note...",
+    "next_if_normal": "deep_squat",
+    "next_if_issue": "part_spine_rot"
+  },
+  {
+    "id": "deep_squat",
+    "num": 6,
+    "label": "5. Deep Squat",
+    "badge": "1st Screen",
+    "purpose": "골반, 엉덩관절, 무릎, 발목의 대칭적 가동성과 통증을 살펴본다.",
+    "photos": [
+      {
+        "src": "pptx_assets/cropped/slide19_img0.jpeg",
+        "cap": "▲ 딥 스쿼트 — 봉 위로, 최대 깊이"
+      }
+    ],
+    "howto": [
+      {
+        "n": 1,
+        "t": "준비",
+        "txt": "발 어깨 너비, 봉을 하늘로 들어 팔꿈치 신전·귀 선 유지."
+      },
+      {
+        "n": 2,
+        "t": "시행",
+        "txt": "시선 정면, 깊숙이 스쿼트 자세."
+      }
+    ],
+    "normal_txt": "움직임 시 시상면 유지 되고 , 발 뒤꿈치가 바닥에서 떨어지지 않으면 .",
+    "normal_tags": [
+      "뒤꿈치 접지"
+    ],
+    "compensations": [
+      "발목의 외회전",
+      "뒤꿈치가 바닥에서 떨어짐 , 뒤로 넘어짐",
+      "Deep Squat"
+    ],
+    "cautions": [
+      "머리와 가슴은 정면을 향하도록 한다",
+      "치료사는 정면 , 측면에서 관찰한다"
+    ],
+    "hasCm": false,
+    "hasImpossible": true,
+    "notes_placeholder": "Note...",
+    "next_if_normal": null,
+    "next_if_issue": "part_deep_squat"
+  },
+  {
+    "id": "part_shoulder_upper",
+    "num": "1-P",
+    "label": "Part — 위 패턴 (Shoulder)",
+    "badge": "Part Assessment",
+    "isPartAssessment": true,
+    "purpose": "위 패턴 이상 시 선택적 ROM — 원인 감별.",
+    "photos": [
+      {
+        "src": "pptx_assets/cropped/slide23_img0.jpeg",
+        "cap": "흉추 신전/회전"
+      },
+      {
+        "src": "pptx_assets/cropped/slide23_img1.jpeg",
+        "cap": "위 패턴"
+      },
+      {
+        "src": "pptx_assets/cropped/slide23_img2.jpeg",
+        "cap": "외회전"
+      },
+      {
+        "src": "pptx_assets/cropped/slide23_img3.jpeg",
+        "cap": "외전/굴곡"
+      },
+      {
+        "src": "pptx_assets/cropped/slide23_img4.jpeg",
+        "cap": "외전·굴곡 & 팔꿈치 굴곡"
+      }
+    ],
+    "keyItems": [
+      {
+        "id": "k_tho_upper",
+        "pos": "K",
+        "name": "흉추 신전/회전",
+        "hasLR": true
+      },
+      {
+        "id": "upper_pattern",
+        "pos": "P",
+        "name": "위 패턴",
+        "hasLR": true,
+        "passives": [
+          {
+            "id": "upper_pat_p",
+            "pos": "P",
+            "name": "위 패턴 — Passive",
+            "hasLR": true
+          },
+          {
+            "id": "ext_rot_p",
+            "pos": "P",
+            "name": "외회전 — Passive",
+            "hasLR": true
+          },
+          {
+            "id": "abd_p",
+            "pos": "P",
+            "name": "외전/굴곡 — Passive",
+            "hasLR": true
+          },
+          {
+            "id": "abd_elb_p",
+            "pos": "P",
+            "name": "외전/굴곡 & 팔꿈치 굴곡 — Passive",
+            "hasLR": true
+          }
+        ]
+      }
+    ],
+    "exercises": [
+      {
+        "n": 1,
+        "txt": "흉추 모빌리티 (사이드 라잉 로테이션)"
+      },
+      {
+        "n": 2,
+        "txt": "어깨 외회전 스트레칭"
+      },
+      {
+        "n": 3,
+        "txt": "도어웨이 스트레칭 (외전/굴곡)"
+      }
+    ],
+    "notes_placeholder": "Note...",
+    "next": "shoulder_lower"
+  },
+  {
+    "id": "part_shoulder_lower",
+    "num": "2-P",
+    "label": "Part — 아래 패턴 (Shoulder)",
+    "badge": "Part Assessment",
+    "isPartAssessment": true,
+    "purpose": "아래 패턴 이상 시 선택적 ROM.",
+    "photos": [
+      {
+        "src": "pptx_assets/cropped/slide22_img0.jpeg",
+        "cap": "흉추 신전/회전"
+      },
+      {
+        "src": "pptx_assets/cropped/slide22_img1.jpeg",
+        "cap": "아래 패턴"
+      },
+      {
+        "src": "pptx_assets/cropped/slide22_img2.jpeg",
+        "cap": "내회전"
+      },
+      {
+        "src": "pptx_assets/cropped/slide22_img3.jpeg",
+        "cap": "신전"
+      },
+      {
+        "src": "pptx_assets/cropped/slide22_img4.jpeg",
+        "cap": "신전 & 팔꿈치 굴곡"
+      }
+    ],
+    "keyItems": [
+      {
+        "id": "lk_tho",
+        "pos": "K",
+        "name": "흉추 신전/회전",
+        "hasLR": true
+      },
+      {
+        "id": "lower_pattern",
+        "pos": "P",
+        "name": "아래 패턴",
+        "hasLR": true,
+        "passives": [
+          {
+            "id": "lower_pat_p",
+            "pos": "P",
+            "name": "아래 패턴 — Passive",
+            "hasLR": true
+          },
+          {
+            "id": "inner_rot_p",
+            "pos": "P",
+            "name": "내회전 — Passive",
+            "hasLR": true
+          },
+          {
+            "id": "ext_p",
+            "pos": "P",
+            "name": "신전 — Passive",
+            "hasLR": true
+          },
+          {
+            "id": "ext_elb_p",
+            "pos": "P",
+            "name": "신전 & 팔꿈치 굴곡 — Passive",
+            "hasLR": true
+          }
+        ]
+      }
+    ],
+    "exercises": [
+      {
+        "n": 1,
+        "txt": "흉추 모빌리티 운동"
+      },
+      {
+        "n": 2,
+        "txt": "어깨 내회전 스트레칭"
+      },
+      {
+        "n": 3,
+        "txt": "어깨 신전 스트레칭 (도어웨이)"
+      }
+    ],
+    "notes_placeholder": "Note...",
+    "next": "spine_flex"
+  },
+  {
+    "id": "part_spine_flex",
+    "num": "3-P",
+    "label": "Part — Multi-Segmental Flexion",
+    "badge": "Part Assessment",
+    "isPartAssessment": true,
+    "purpose": "굴곡 이상 시 선택적 ROM (VAS 0~4 운동 전).",
+    "photos": [
+      {
+        "src": "pptx_assets/cropped/slide24_img0.jpeg",
+        "cap": "▲ 평가 동작 1"
+      },
+      {
+        "src": "pptx_assets/cropped/slide24_img1.jpeg",
+        "cap": "▲ 평가 동작 2"
+      },
+      {
+        "src": "pptx_assets/cropped/slide24_img2.jpeg",
+        "cap": "▲ 평가 동작 3"
+      },
+      {
+        "src": "pptx_assets/cropped/slide24_img3.jpeg",
+        "cap": "▲ 평가 동작 4"
+      },
+      {
+        "src": "pptx_assets/cropped/slide24_img4.jpeg",
+        "cap": "▲ 평가 동작 5"
+      },
+      {
+        "src": "pptx_assets/cropped/slide25_img0.jpeg",
+        "cap": "▲ 평가 동작 1"
+      },
+      {
+        "src": "pptx_assets/cropped/slide25_img1.jpeg",
+        "cap": "▲ 평가 동작 2"
+      },
+      {
+        "src": "pptx_assets/cropped/slide25_img2.jpeg",
+        "cap": "▲ 평가 동작 3"
+      }
+    ],
+    "keyItems": [
+      {
+        "id": "cer_flex",
+        "pos": "S",
+        "name": "경추 굴곡",
+        "hasLR": false
+      },
+      {
+        "id": "c0c1",
+        "pos": "S",
+        "name": "C0-C1 굴곡",
+        "hasLR": false
+      },
+      {
+        "id": "tft",
+        "pos": "Sit",
+        "name": "발끝 닿기 — 요추·엉덩 굴곡",
+        "hasLR": false
+      },
+      {
+        "id": "slr",
+        "pos": "S",
+        "name": "SLR — 엉덩관절 굴곡",
+        "hasLR": true
+      },
+      {
+        "id": "slr_core",
+        "pos": "S",
+        "name": "안정 SLR — Core",
+        "hasLR": false
+      },
+      {
+        "id": "ktc_shin",
+        "pos": "S",
+        "name": "무릎가슴(정강이) — 엉덩·무릎 굴곡",
+        "hasLR": true
+      },
+      {
+        "id": "ktc_thigh",
+        "pos": "S",
+        "name": "무릎가슴(허벅지) — 엉덩관절 굴곡",
+        "hasLR": true
+      },
+      {
+        "id": "rocking",
+        "pos": "K",
+        "name": "록킹 — 척추 굴곡",
+        "hasLR": false
+      }
+    ],
+    "exercises": [
+      {
+        "n": 1,
+        "txt": "경추·흉추 모빌리티 드릴"
+      },
+      {
+        "n": 2,
+        "txt": "힙 플렉스 스트레칭"
+      },
+      {
+        "n": 3,
+        "txt": "코어 안정화 (Dead Bug)"
+      }
+    ],
+    "notes_placeholder": "Note...",
+    "next": "spine_ext"
+  },
+  {
+    "id": "part_spine_ext",
+    "num": "4-P",
+    "label": "Part — Multi-Segmental Extension",
+    "badge": "Part Assessment",
+    "isPartAssessment": true,
+    "purpose": "신전 이상 시 선택적 ROM.",
+    "photos": [
+      {
+        "src": "pptx_assets/cropped/slide26_img0.jpeg",
+        "cap": "▲ 평가 동작 1"
+      },
+      {
+        "src": "pptx_assets/cropped/slide26_img1.jpeg",
+        "cap": "▲ 평가 동작 2"
+      },
+      {
+        "src": "pptx_assets/cropped/slide26_img2.jpeg",
+        "cap": "▲ 평가 동작 3"
+      },
+      {
+        "src": "pptx_assets/cropped/slide26_img3.jpeg",
+        "cap": "▲ 평가 동작 4"
+      },
+      {
+        "src": "pptx_assets/cropped/slide26_img4.jpeg",
+        "cap": "▲ 평가 동작 5"
+      },
+      {
+        "src": "pptx_assets/cropped/slide27_img0.jpeg",
+        "cap": "▲ 평가 동작 1"
+      },
+      {
+        "src": "pptx_assets/cropped/slide27_img1.jpeg",
+        "cap": "▲ 평가 동작 2"
+      },
+      {
+        "src": "pptx_assets/cropped/slide27_img2.jpeg",
+        "cap": "▲ 평가 동작 3"
+      }
+    ],
+    "keyItems": [
+      {
+        "id": "cer_ext",
+        "pos": "S",
+        "name": "경추 신전",
+        "hasLR": false
+      },
+      {
+        "id": "pressup",
+        "pos": "P",
+        "name": "프레스업 — 척추 신전",
+        "hasLR": false
+      },
+      {
+        "id": "k_tho_ext",
+        "pos": "K",
+        "name": "흉추 신전/회전",
+        "hasLR": true
+      },
+      {
+        "id": "lum_ext",
+        "pos": "P",
+        "name": "요추 신전/회전",
+        "hasLR": true
+      },
+      {
+        "id": "shou_fl",
+        "pos": "P",
+        "name": "어깨대굴곡",
+        "hasLR": true
+      },
+      {
+        "id": "faber",
+        "pos": "S",
+        "name": "FABER — 엉덩 굴곡/외전/외회전",
+        "hasLR": true
+      },
+      {
+        "id": "thomas",
+        "pos": "S",
+        "name": "변형 토마스 — 장요근, 대퇴직근",
+        "hasLR": true
+      },
+      {
+        "id": "hip_ext",
+        "pos": "P",
+        "name": "엉덩관절 신전",
+        "hasLR": true
+      }
+    ],
+    "exercises": [
+      {
+        "n": 1,
+        "txt": "프레스업 / 코브라 모빌리티"
+      },
+      {
+        "n": 2,
+        "txt": "힙 플렉서 스트레칭"
+      },
+      {
+        "n": 3,
+        "txt": "어깨대굴곡 강화"
+      }
+    ],
+    "notes_placeholder": "Note...",
+    "next": "spine_rot"
+  },
+  {
+    "id": "part_spine_rot",
+    "num": "5-P",
+    "label": "Part — Multi-Segmental Rotation",
+    "badge": "Part Assessment",
+    "isPartAssessment": true,
+    "purpose": "회전 이상 시 선택적 ROM.",
+    "photos": [
+      {
+        "src": "pptx_assets/cropped/slide28_img0.jpeg",
+        "cap": "▲ 평가 동작 1"
+      },
+      {
+        "src": "pptx_assets/cropped/slide28_img1.jpeg",
+        "cap": "▲ 평가 동작 2"
+      },
+      {
+        "src": "pptx_assets/cropped/slide28_img2.jpeg",
+        "cap": "▲ 평가 동작 3"
+      },
+      {
+        "src": "pptx_assets/cropped/slide28_img3.jpeg",
+        "cap": "▲ 평가 동작 4"
+      },
+      {
+        "src": "pptx_assets/cropped/slide28_img4.jpeg",
+        "cap": "▲ 평가 동작 5"
+      },
+      {
+        "src": "pptx_assets/cropped/slide29_img0.jpeg",
+        "cap": "▲ 평가 동작 1"
+      },
+      {
+        "src": "pptx_assets/cropped/slide29_img1.jpeg",
+        "cap": "▲ 평가 동작 2"
+      },
+      {
+        "src": "pptx_assets/cropped/slide29_img2.jpeg",
+        "cap": "▲ 평가 동작 3"
+      },
+      {
+        "src": "pptx_assets/cropped/slide30_img0.jpeg",
+        "cap": "▲ 평가 동작 1"
+      },
+      {
+        "src": "pptx_assets/cropped/slide30_img1.jpeg",
+        "cap": "▲ 평가 동작 2"
+      },
+      {
+        "src": "pptx_assets/cropped/slide30_img2.jpeg",
+        "cap": "▲ 평가 동작 3"
+      }
+    ],
+    "keyItems": [
+      {
+        "id": "cer_rot",
+        "pos": "S",
+        "name": "경추 회전",
+        "hasLR": true
+      },
+      {
+        "id": "c1c2",
+        "pos": "S",
+        "name": "C1-C2 회전",
+        "hasLR": true
+      },
+      {
+        "id": "tho_rot",
+        "pos": "Sit",
+        "name": "흉부 회전",
+        "hasLR": true
+      },
+      {
+        "id": "k_tho_rot",
+        "pos": "K",
+        "name": "흉추 신전/회전",
+        "hasLR": true
+      },
+      {
+        "id": "lum_rot",
+        "pos": "P",
+        "name": "요추 신전/회전",
+        "hasLR": true
+      },
+      {
+        "id": "hip_ir",
+        "pos": "P",
+        "name": "엉덩관절 내회전",
+        "hasLR": true
+      },
+      {
+        "id": "hip_er",
+        "pos": "P",
+        "name": "엉덩관절 외회전",
+        "hasLR": true
+      }
+    ],
+    "exercises": [
+      {
+        "n": 1,
+        "txt": "척추 회전 모빌리티"
+      },
+      {
+        "n": 2,
+        "txt": "힙 IR/ER 스트레칭"
+      }
+    ],
+    "notes_placeholder": "Note...",
+    "next": "deep_squat"
+  },
+  {
+    "id": "part_deep_squat",
+    "num": "6-P",
+    "label": "Part — Deep Squat",
+    "badge": "Part Assessment",
+    "isPartAssessment": true,
+    "purpose": "딥 스쿼트 이상 시 하지 선택적 ROM.",
+    "photos": [
+      {
+        "src": "pptx_assets/cropped/slide31_img0.jpeg",
+        "cap": "▲ 평가 동작 1"
+      },
+      {
+        "src": "pptx_assets/cropped/slide31_img1.jpeg",
+        "cap": "▲ 평가 동작 2"
+      },
+      {
+        "src": "pptx_assets/cropped/slide31_img2.jpeg",
+        "cap": "▲ 평가 동작 3"
+      },
+      {
+        "src": "pptx_assets/cropped/slide31_img3.jpeg",
+        "cap": "▲ 평가 동작 4"
+      },
+      {
+        "src": "pptx_assets/cropped/slide32_img0.jpeg",
+        "cap": "▲ 평가 동작 1"
+      },
+      {
+        "src": "pptx_assets/cropped/slide32_img1.jpeg",
+        "cap": "▲ 평가 동작 2"
+      },
+      {
+        "src": "pptx_assets/cropped/slide32_img2.jpeg",
+        "cap": "▲ 평가 동작 3"
+      },
+      {
+        "src": "pptx_assets/cropped/slide32_img3.jpeg",
+        "cap": "▲ 평가 동작 4"
+      },
+      {
+        "src": "pptx_assets/cropped/slide32_img4.jpeg",
+        "cap": "▲ 평가 동작 5"
+      },
+      {
+        "src": "pptx_assets/cropped/slide32_img5.jpeg",
+        "cap": "▲ 평가 동작 6"
+      }
+    ],
+    "keyItems": [
+      {
+        "id": "sq_shin",
+        "pos": "S",
+        "name": "무릎가슴(정강이) — Hip & Knee Flexion",
+        "hasLR": true
+      },
+      {
+        "id": "sq_thigh",
+        "pos": "S",
+        "name": "무릎가슴(허벅지) — Hip Flexion",
+        "hasLR": true
+      },
+      {
+        "id": "ank_df",
+        "pos": "S",
+        "name": "텐덤 발목 배측굴곡",
+        "hasLR": true
+      },
+      {
+        "id": "ank_inv",
+        "pos": "Sit",
+        "name": "발목 내반/외반",
+        "hasLR": true
+      },
+      {
+        "id": "hip_ir_sq",
+        "pos": "Sit",
+        "name": "엉덩관절 내회전",
+        "hasLR": true
+      },
+      {
+        "id": "hip_er_sq",
+        "pos": "Sit",
+        "name": "엉덩관절 외회전",
+        "hasLR": true
+      }
+    ],
+    "exercises": [
+      {
+        "n": 1,
+        "txt": "발목 배측굴곡 (Calf Stretch / Band DF)"
+      },
+      {
+        "n": 2,
+        "txt": "엉덩관절 굴곡 스트레칭"
+      },
+      {
+        "n": 3,
+        "txt": "Goblet Squat Hold"
+      }
+    ],
+    "notes_placeholder": "Note...",
+    "next": null
+  }
+];
