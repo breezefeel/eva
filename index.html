@@ -142,6 +142,23 @@
     background: #222B39; color: #D7E2F0;
   }
   .part i { font-style: normal; color: var(--muted); margin-right: 4px; }
+  .sent {
+    display: flex; gap: 8px; align-items: flex-start;
+    padding: 8px 0; border-bottom: 1px solid var(--line);
+  }
+  .sent:last-child { border-bottom: none; }
+  .sent i {
+    flex: 0 0 20px; height: 20px; margin-top: 2px; border-radius: 6px;
+    background: #222B39; color: var(--muted); font: 800 11px/20px "Noto Sans KR", sans-serif;
+    font-style: normal; text-align: center;
+  }
+  .sent p { margin: 0; flex: 1; min-width: 0; }
+  .sg { margin: 0 0 10px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
+  .sg:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+  .sg-label {
+    font-family: "Noto Sans KR", sans-serif; font-size: 10px; font-weight: 800;
+    letter-spacing: .04em; color: var(--muted); margin: 0 0 5px;
+  }
 
   footer {
     display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
@@ -189,7 +206,7 @@
   <header>
     <div class="brand">
       <h1>게임 화면 영어 번역</h1>
-      <p>카메라를 대사·자막에 맞추면 왼쪽은 영상, 오른쪽은 해석이 실시간으로 바뀝니다</p>
+      <p>1초마다 화면을 보고, 영어가 바뀌면 바로 갈아끼웁니다</p>
     </div>
     <div class="status" id="status">준비 중</div>
   </header>
@@ -203,10 +220,9 @@
       <div class="cam-view">
         <video id="video" playsinline muted autoplay></video>
         <img id="still" alt="선택한 사진">
-        <div class="roi bottom" id="roi"></div>
+        <div class="roi full" id="roi"></div>
         <div class="cam-hint" id="hint">
-          <strong>카메라 시작</strong>을 누른 뒤 게임 자막이 노란 점선 안에 들어오게 비추세요.
-          사파리에서 공유 → <strong>홈 화면에 추가</strong>하면 앱처럼 쓸 수 있습니다.
+          <strong>카메라 시작</strong>을 누르면 1초마다 영어를 읽습니다. 화면이 같으면 결과를 유지하고, 대사가 바뀌면 바로 갱신합니다.
         </div>
       </div>
     </section>
@@ -214,7 +230,7 @@
     <aside class="board">
       <section class="card en">
         <div class="label"><span><i class="dot"></i>영어 자막</span><span id="enMeta"></span></div>
-        <div class="body placeholder" id="enText">아직 인식된 문장이 없습니다.</div>
+        <div class="body placeholder" id="enText">아직 인식된 문장이 없습니다. 여러 문장이면 한 줄씩 나눠집니다.</div>
       </section>
       <section class="card ko">
         <div class="label"><span><i class="dot"></i>한글 번역</span></div>
@@ -234,12 +250,12 @@
   <footer>
     <button class="primary" id="btnStart" type="button">카메라 시작</button>
     <button id="btnScan" type="button" disabled>지금 인식</button>
-    <button id="btnAuto" type="button" disabled>자동 인식</button>
+    <button id="btnAuto" type="button" disabled>1초마다 인식</button>
     <select id="region" aria-label="인식 영역">
-      <option value="bottom" selected>하단 자막</option>
-      <option value="center">화면 중앙</option>
-      <option value="top">상단 글자</option>
-      <option value="full">화면 전체</option>
+      <option value="full" selected>화면 전체</option>
+      <option value="bottom">하단만</option>
+      <option value="center">중앙만</option>
+      <option value="top">상단만</option>
     </select>
     <label class="file">사진 선택<input id="file" type="file" accept="image/*"></label>
     <span class="grow"></span>
@@ -300,13 +316,22 @@
     left: ["남긴/왼쪽", "형용사"], gone: ["사라진", "형용사"]
   };
 
+  const OCR_OUT = {
+    text: true, blocks: true, hocr: false, tsv: false, box: false,
+    unlv: false, osd: false, pdf: false, imageColor: false, imageGrey: false,
+    imageBinary: false, debug: false
+  };
+
   let worker = null;
   let stream = null;
   let looping = false;
   let busy = false;
   let lastText = "";
-  let lastHash = "";
+  let lastFrameSig = null;
+  let lastPsm = "";
+  let analyzeTick = 0;
   let usingStill = false;
+  const scratch = document.createElement("canvas");
 
   function setStatus(text, kind) {
     $("status").textContent = text;
@@ -338,12 +363,120 @@
         }
       }
     });
-    await worker.setParameters({
-      tessedit_pageseg_mode: "6",
-      tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,!?'\":;- "
-    });
+    await applyOcrMode();
     $("boot").classList.add("hidden");
     setStatus("준비됨");
+  }
+
+  async function applyOcrMode(psm) {
+    const mode = String(psm || "6");
+    if (mode === lastPsm) return;
+    await worker.setParameters({
+      tessedit_pageseg_mode: mode,
+      tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,!?'\":;-() ",
+      preserve_interword_spaces: "1",
+      user_defined_dpi: "120",
+      tessedit_do_invert: "0"
+    });
+    lastPsm = mode;
+  }
+
+  function otsuThreshold(data, pixels) {
+    const hist = new Uint32Array(256);
+    for (let i = 0; i < data.length; i += 4) hist[data[i]]++;
+    let sum = 0;
+    for (let t = 0; t < 256; t++) sum += t * hist[t];
+    let sumB = 0, wB = 0, max = 0, thr = 128;
+    for (let t = 0; t < 256; t++) {
+      wB += hist[t];
+      if (!wB) continue;
+      const wF = pixels - wB;
+      if (!wF) break;
+      sumB += t * hist[t];
+      const mB = sumB / wB;
+      const mF = (sum - sumB) / wF;
+      const between = wB * wF * (mB - mF) * (mB - mF);
+      if (between > max) { max = between; thr = t; }
+    }
+    return thr;
+  }
+
+  function blockSig(data, w, h) {
+    const gw = 20, gh = 12;
+    const out = new Array(gw * gh);
+    let i = 0;
+    for (let gy = 0; gy < gh; gy++) {
+      for (let gx = 0; gx < gw; gx++) {
+        const x0 = (gx * w / gw) | 0;
+        const x1 = ((gx + 1) * w / gw) | 0;
+        const y0 = (gy * h / gh) | 0;
+        const y1 = ((gy + 1) * h / gh) | 0;
+        let s = 0, n = 0;
+        for (let y = y0; y < y1; y += 2) {
+          for (let x = x0; x < x1; x += 2) {
+            s += data[(y * w + x) * 4];
+            n++;
+          }
+        }
+        out[i++] = n ? ((s / n) / 32) | 0 : 0;
+      }
+    }
+    return out;
+  }
+
+  function screenChanged(prev, next) {
+    if (!prev || !next || prev.length !== next.length) return true;
+    let diff = 0;
+    for (let i = 0; i < prev.length; i++) if (prev[i] !== next[i]) diff++;
+    return diff / prev.length > 0.07;
+  }
+
+  function cropAndScaleInk(ctx, w, h) {
+    const img = ctx.getImageData(0, 0, w, h);
+    const d = img.data;
+    const minRow = Math.max(4, (w * 0.01) | 0);
+    const minCol = Math.max(4, (h * 0.01) | 0);
+    let y0 = 0, y1 = h - 1, x0 = 0, x1 = w - 1;
+    const rowInk = function (y) {
+      let n = 0;
+      for (let x = 0, i = (y * w) * 4; x < w; x++, i += 4) if (d[i] < 90) n++;
+      return n;
+    };
+    const colInk = function (x, top, bot) {
+      let n = 0;
+      for (let y = top; y <= bot; y++) if (d[(y * w + x) * 4] < 90) n++;
+      return n;
+    };
+    while (y0 < h && rowInk(y0) < minRow) y0++;
+    while (y1 > y0 && rowInk(y1) < minRow) y1--;
+    while (x0 < w && colInk(x0, y0, y1) < minCol) x0++;
+    while (x1 > x0 && colInk(x1, y0, y1) < minCol) x1--;
+    const pad = 10;
+    x0 = Math.max(0, x0 - pad);
+    y0 = Math.max(0, y0 - pad);
+    x1 = Math.min(w - 1, x1 + pad);
+    y1 = Math.min(h - 1, y1 + pad);
+    const nw = x1 - x0 + 1;
+    const nh = y1 - y0 + 1;
+    if (nw < 36 || nh < 14 || nw * nh > w * h * 0.94) return false;
+    let tw = nw, th = nh;
+    if (th < 64) {
+      const s = Math.min(2.6, 88 / th);
+      tw = Math.round(nw * s);
+      th = Math.round(nh * s);
+    } else if (th < 100) {
+      tw = Math.round(nw * 1.45);
+      th = Math.round(nh * 1.45);
+    }
+    scratch.width = nw;
+    scratch.height = nh;
+    scratch.getContext("2d").putImageData(ctx.getImageData(x0, y0, nw, nh), 0, 0);
+    work.width = tw;
+    work.height = th;
+    const out = work.getContext("2d", { willReadFrequently: true });
+    out.imageSmoothingEnabled = false;
+    out.drawImage(scratch, 0, 0, tw, th);
+    return true;
   }
 
   function grabFrame() {
@@ -357,34 +490,91 @@
     const sy = Math.floor(sh * box.y);
     const cw = Math.max(40, Math.floor(sw * box.w));
     const ch = Math.max(40, Math.floor(sh * box.h));
-    const scale = cw < 900 ? 2.2 : 1.6;
-    work.width = Math.floor(cw * scale);
-    work.height = Math.floor(ch * scale);
+    const maxW = 960;
+    let dw = cw, dh = ch;
+    if (dw > maxW) {
+      dh = Math.round(dh * (maxW / dw));
+      dw = maxW;
+    }
+    work.width = dw;
+    work.height = dh;
     const ctx = work.getContext("2d", { willReadFrequently: true });
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(src, sx, sy, cw, ch, 0, 0, work.width, work.height);
-    const img = ctx.getImageData(0, 0, work.width, work.height);
+    ctx.drawImage(src, sx, sy, cw, ch, 0, 0, dw, dh);
+    const img = ctx.getImageData(0, 0, dw, dh);
     const d = img.data;
+    const pixels = dw * dh;
+    let mean = 0;
     for (let i = 0; i < d.length; i += 4) {
-      const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-      const v = g < 140 ? 0 : 255;
+      let g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      g = (g - 16) * 1.55;
+      if (g < 0) g = 0;
+      if (g > 255) g = 255;
+      d[i] = d[i + 1] = d[i + 2] = g;
+      mean += g;
+    }
+    mean /= pixels;
+    if (mean < 122) {
+      for (let i = 0; i < d.length; i += 4) {
+        const v = 255 - d[i];
+        d[i] = d[i + 1] = d[i + 2] = v;
+      }
+    }
+    const thr = otsuThreshold(d, pixels);
+    for (let i = 0; i < d.length; i += 4) {
+      const v = d[i] < thr ? 0 : 255;
       d[i] = d[i + 1] = d[i + 2] = v;
     }
     ctx.putImageData(img, 0, 0);
-    return work;
+    const sig = blockSig(d, dw, dh);
+    const cropped = cropAndScaleInk(ctx, dw, dh);
+    return { canvas: work, sig: sig, psm: cropped ? "6" : "11" };
   }
 
-  function cleanOcr(raw) {
-    return raw
+  function tidyLine(raw) {
+    return String(raw || "")
       .replace(/[|]/g, "I")
       .replace(/[“”]/g, '"')
       .replace(/[‘’]/g, "'")
-      .split(/\n+/)
-      .map((line) => line.replace(/\s+/g, " ").trim())
-      .filter((line) => line.length >= 2 && /[A-Za-z]/.test(line))
-      .join(" ")
+      .replace(/\s+/g, " ")
       .replace(/\s+([,.!?;:])/g, "$1")
       .trim();
+  }
+
+  function isEnglishy(s) {
+    const letters = (s.match(/[A-Za-z]/g) || []).length;
+    const compact = s.replace(/\s/g, "").length;
+    return letters >= 2 && letters / Math.max(compact, 1) > 0.42;
+  }
+
+  function splitPunct(text) {
+    return tidyLine(text)
+      .split(/(?<=[.!?])\s+|(?<=[.!?]["'])\s+|;\s+/)
+      .map(tidyLine)
+      .filter((s) => s.length >= 2 && isEnglishy(s));
+  }
+
+  function extractSentences(result) {
+    const lines = (result.data.lines || [])
+      .filter((l) => (l.confidence || 0) >= 32)
+      .map((l) => tidyLine(l.text || ""))
+      .filter((s) => s.length >= 2 && isEnglishy(s));
+    const collected = [];
+    for (const line of lines) {
+      const bits = splitPunct(line);
+      if (bits.length) collected.push.apply(collected, bits);
+      else collected.push(line);
+    }
+    const out = [];
+    for (const s of collected) {
+      if (out.some((x) => similar(x, s))) continue;
+      out.push(s);
+    }
+    if (out.length) return out.slice(0, 12);
+    const blob = tidyLine(result.data.text || "");
+    const punct = splitPunct(blob);
+    if (punct.length) return punct.slice(0, 12);
+    return blob && isEnglishy(blob) ? [blob] : [];
   }
 
   function similar(a, b) {
@@ -438,42 +628,26 @@
     return w;
   }
 
-  async function wordMeanings(text) {
+  async function wordMeanings(text, limit) {
     const seen = new Set();
     const picks = [];
+    const max = limit || 10;
     for (const raw of tokenize(text)) {
       const key = lemma(raw);
       if (STOP.has(key) || key.length < 2 || seen.has(key)) continue;
       seen.add(key);
       picks.push({ raw, key });
-      if (picks.length >= 10) break;
+      if (picks.length >= max) break;
     }
-    const cards = [];
-    for (const p of picks) {
+    return Promise.all(picks.map(async function (p) {
       const local = LOCAL_DICT[p.key];
-      if (local) {
-        cards.push({ en: p.raw, ko: local[0], pos: local[1] });
-        continue;
-      }
-      try {
-        const r = await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(p.key));
-        if (r.ok) {
-          const j = await r.json();
-          const m = j[0] && j[0].meanings && j[0].meanings[0];
-          const def = m && m.definitions && m.definitions[0] && m.definitions[0].definition;
-          const pos = m && m.partOfSpeech;
-          const ko = def ? await translateKo(p.key + ": " + def) : await translateKo(p.key);
-          cards.push({ en: p.raw, ko: ko || p.key, pos: pos || "" });
-          continue;
-        }
-      } catch (e) {}
-      const ko = await translateKo(p.key);
-      cards.push({ en: p.raw, ko: ko || "(뜻 검색 실패)", pos: "" });
-    }
-    return cards;
+      if (local) return { en: p.raw, ko: local[0], pos: local[1] };
+      return { en: p.raw, ko: (await translateKo(p.key)) || p.key, pos: "" };
+    }));
   }
 
-  function grammar(text) {
+  function grammar(text, opt) {
+    const compact = !!(opt && opt.compact);
     const t = text.trim();
     const low = t.toLowerCase();
     const items = [];
@@ -577,70 +751,100 @@
       });
     }
 
-    items.push({
-      title: "실시간 해석 순서",
-      expl: "① 문장 끝 문장부호로 평서/질문/감탄을 본다 → ② 조동사·시제를 표시한다 → ③ 주어와 본동사를 찾는다 → ④ 나머지 명사·형용사를 수식어로 붙인다."
-    });
-
-    return { items: items.slice(0, 4), parts };
-  }
-
-  function renderWords(cards) {
-    if (!cards.length) {
-      setBody($("wordBox"), "이번 문장에서 따로 볼 단어가 거의 없습니다.", true);
-      return;
+    if (!compact) {
+      items.push({
+        title: "실시간 해석 순서",
+        expl: "① 문장 끝 문장부호로 평서/질문/감탄을 본다 → ② 조동사·시제를 표시한다 → ③ 주어와 본동사를 찾는다 → ④ 나머지 명사·형용사를 수식어로 붙인다."
+      });
     }
-    $("wordBox").classList.remove("placeholder");
-    $("wordBox").innerHTML = '<div class="word-list">' + cards.map((c) =>
-      '<div class="word"><b>' + escapeHtml(c.en) + "</b><em>" + escapeHtml(c.ko) + "</em>" +
-      (c.pos ? "<small>" + escapeHtml(c.pos) + "</small>" : "") + "</div>"
-    ).join("") + "</div>";
+
+    return { items: items.slice(0, compact ? 2 : 4), parts };
   }
 
-  function renderGram(g) {
-    $("gramBox").classList.remove("placeholder");
-    $("gramBox").innerHTML =
-      g.items.map((it) => '<div class="gram-item"><h3>' + escapeHtml(it.title) + "</h3><p>" + escapeHtml(it.expl) + "</p></div>").join("") +
+  function wordCardHtml(c) {
+    return '<div class="word"><b>' + escapeHtml(c.en) + "</b><em>" + escapeHtml(c.ko) + "</em>" +
+      (c.pos ? "<small>" + escapeHtml(c.pos) + "</small>" : "") + "</div>";
+  }
+
+  function gramHtml(g) {
+    return g.items.map((it) => '<div class="gram-item"><h3>' + escapeHtml(it.title) + "</h3><p>" + escapeHtml(it.expl) + "</p></div>").join("") +
       (g.parts.length ? '<div class="parts">' + g.parts.map((p) => '<span class="part"><i>' + escapeHtml(p[0]) + "</i>" + escapeHtml(p[1]) + "</span>").join("") + "</div>" : "");
+  }
+
+  function renderSentenceList(el, sentences) {
+    const numbered = sentences.length > 1;
+    el.classList.remove("placeholder");
+    el.innerHTML = sentences.map((t, i) =>
+      '<div class="sent">' + (numbered ? "<i>" + (i + 1) + "</i>" : "") + "<p>" + escapeHtml(t || "—") + "</p></div>"
+    ).join("");
+  }
+
+  function wrapGroups(items, numbered, innerFn) {
+    if (!numbered) return innerFn(items[0], 0);
+    return items.map((item, i) =>
+      '<div class="sg"><div class="sg-label">문장 ' + (i + 1) + "</div>" + innerFn(item, i) + "</div>"
+    ).join("");
   }
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
-  async function analyze(text) {
-    setBody($("enText"), escapeHtml(text), false);
-    $("enMeta").textContent = text.split(/\s+/).length + " words";
+  async function analyze(sentences) {
+    const tick = ++analyzeTick;
+    const numbered = sentences.length > 1;
+    $("enMeta").textContent = sentences.length + "문장";
+    renderSentenceList($("enText"), sentences);
+    $("gramBox").classList.remove("placeholder");
+    $("gramBox").innerHTML = wrapGroups(sentences, numbered, (s) => gramHtml(grammar(s, { compact: numbered })));
     setBody($("koText"), "번역 중…", true);
     setBody($("wordBox"), "단어 찾는 중…", true);
-    setBody($("gramBox"), "문법 분석 중…", true);
-    const [ko, words] = await Promise.all([translateKo(text), wordMeanings(text)]);
-    setBody($("koText"), escapeHtml(ko || "번역을 가져오지 못했습니다. 네트워크를 확인해 주세요."), !ko);
-    renderWords(words);
-    renderGram(grammar(text));
+
+    const kos = await Promise.all(sentences.map(translateKo));
+    if (tick !== analyzeTick) return;
+    renderSentenceList($("koText"), kos.map((k) => k || "번역을 가져오지 못했습니다."));
+
+    const wordGroups = await Promise.all(sentences.map((s) => wordMeanings(s, numbered ? 5 : 10)));
+    if (tick !== analyzeTick) return;
+    const anyWord = wordGroups.some((g) => g.length);
+    if (!anyWord) {
+      setBody($("wordBox"), "이번 화면에서 따로 볼 단어가 거의 없습니다.", true);
+    } else {
+      $("wordBox").classList.remove("placeholder");
+      $("wordBox").innerHTML = wrapGroups(wordGroups, numbered, (cards) =>
+        cards.length ? '<div class="word-list">' + cards.map(wordCardHtml).join("") + "</div>" : '<p class="placeholder">핵심 단어 없음</p>'
+      );
+    }
   }
 
   async function scan() {
     if (busy || !worker) return;
     const frame = grabFrame();
     if (!frame) return;
+    if (!screenChanged(lastFrameSig, frame.sig)) {
+      setStatus("화면 같음 · 유지", looping ? "live" : "");
+      return;
+    }
     busy = true;
     setStatus("화면 읽는 중", "busy");
     try {
-      const result = await worker.recognize(frame);
-      const text = cleanOcr(result.data.text || "");
-      const conf = result.data.confidence || 0;
-      if (!text || text.length < 3 || conf < 28) {
-        setStatus(looping ? "자동 인식 중" : "글자를 못 찾음", looping ? "live" : "");
+      await applyOcrMode(frame.psm);
+      const result = await worker.recognize(frame.canvas, {}, OCR_OUT);
+      const sentences = extractSentences(result);
+      const text = sentences.join(" ");
+      if (!sentences.length) {
+        if (lastText) lastFrameSig = frame.sig;
+        setStatus(looping ? "1초마다 보는 중" : "글자를 못 찾음", looping ? "live" : "");
         return;
       }
+      lastFrameSig = frame.sig;
       if (similar(text, lastText)) {
-        setStatus(looping ? "같은 문장 · 대기" : "인식됨", looping ? "live" : "");
+        setStatus("같은 문장 · 유지", looping ? "live" : "");
         return;
       }
       lastText = text;
-      await analyze(text);
-      setStatus(looping ? "자동 인식 중" : "인식 완료", looping ? "live" : "");
+      setStatus(looping ? "새 문장 반영" : "인식 완료", looping ? "live" : "");
+      analyze(sentences);
     } catch (err) {
       setStatus("인식 오류", "err");
     } finally {
@@ -648,10 +852,16 @@
     }
   }
 
+  function sleep(ms) {
+    return new Promise(function (r) { setTimeout(r, ms); });
+  }
+
   async function loop() {
     while (looping) {
+      const started = Date.now();
       await scan();
-      await new Promise((r) => setTimeout(r, 1600));
+      const left = 1000 - (Date.now() - started);
+      if (looping) await sleep(Math.max(80, left));
     }
   }
 
@@ -665,8 +875,8 @@
         audio: false,
         video: {
           facingMode: { ideal: "environment" },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
         }
       });
       video.srcObject = stream;
@@ -679,7 +889,13 @@
       $("btnScan").disabled = false;
       $("btnAuto").disabled = false;
       $("btnStart").textContent = "카메라 끄기";
-      setStatus("카메라 켜짐", "live");
+      setStatus("1초마다 인식 중", "live");
+      if (!looping) {
+        looping = true;
+        $("btnAuto").classList.add("on");
+        $("btnAuto").textContent = "일시정지";
+        loop();
+      }
     } catch (err) {
       setStatus("카메라 권한을 허용해 주세요", "err");
     }
@@ -688,7 +904,7 @@
   function stopCamera() {
     looping = false;
     $("btnAuto").classList.remove("on");
-    $("btnAuto").textContent = "자동 인식";
+    $("btnAuto").textContent = "1초마다 인식";
     if (stream) {
       stream.getTracks().forEach((t) => t.stop());
       stream = null;
@@ -709,12 +925,17 @@
   $("btnAuto").onclick = function () {
     looping = !looping;
     $("btnAuto").classList.toggle("on", looping);
-    $("btnAuto").textContent = looping ? "자동 끄는 중" : "자동 인식";
-    setStatus(looping ? "자동 인식 중" : "일시정지", looping ? "live" : "");
+    $("btnAuto").textContent = looping ? "일시정지" : "1초마다 인식";
+    setStatus(looping ? "1초마다 인식 중" : "일시정지", looping ? "live" : "");
     if (looping) loop();
   };
 
-  $("region").onchange = function () { regionBox(); };
+  $("region").onchange = function () {
+    regionBox();
+    lastFrameSig = null;
+    lastPsm = "";
+    if (worker) applyOcrMode("6");
+  };
 
   $("file").onchange = function (e) {
     const f = e.target.files && e.target.files[0];
@@ -735,7 +956,8 @@
 
   $("btnClear").onclick = function () {
     lastText = "";
-    setBody($("enText"), "아직 인식된 문장이 없습니다.", true);
+    lastFrameSig = null;
+    setBody($("enText"), "아직 인식된 문장이 없습니다. 여러 문장이면 한 줄씩 나눠집니다.", true);
     setBody($("koText"), "영어가 잡히면 바로 한국어로 보여줍니다.", true);
     setBody($("wordBox"), "핵심 단어의 뜻과 품사가 여기에 뜹니다.", true);
     setBody($("gramBox"), "시제, 조동사, 어순을 어떻게 읽으면 좋은지 알려줍니다.", true);
