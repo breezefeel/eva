@@ -2,274 +2,751 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CMT Movement Screen — 평가 진행</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0B0F14">
+<meta name="description" content="핸드폰·아이패드 카메라로 영어 게임 화면을 비추면 자막, 한글 번역, 단어 뜻, 문법을 실시간으로 보여줍니다.">
+<meta name="apple-mobile-web-app-title" content="게임영어번역">
+<title>영어 게임 실시간 번역</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800;900&family=Source+Serif+4:opsz,wght@8..60,500;8..60,700&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
-:root{
-  --navy:#1C2541;--teal:#0F4C75;--orange:#F37C20;
-  --bg:#F5F4F0;--surface:#fff;--border:#E2DFD8;
-  --text:#1a1a1a;--muted:#7a7570;
-  --ok:#2e7d32;--ok-bg:#EAF6EC;--ok-border:#4CAF50;
-  --ng:#e65100;--ng-bg:#FFF0EC;--ng-border:#F37C20;
-  --pain:#b71c1c;--pain-bg:#FFEBEE;--pain-border:#E53935;
-  --yellow-bg:#FFF8E1;--yellow-border:#F9A825;
-  --radius:12px;
-}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh;}
+  :root {
+    --bg: #0B0F14;
+    --panel: #141A22;
+    --card: #1B2330;
+    --line: #2A3444;
+    --text: #F3F6FA;
+    --muted: #8B97A8;
+    --en: #F4D58D;
+    --ko: #9EE7C8;
+    --word: #9EC5FF;
+    --gram: #E7B4FF;
+    --accent: #3D8BFF;
+    --danger: #F07178;
+    --ok: #5DDC9A;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font-family: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+    overflow: hidden;
+  }
+  body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
 
-/* HEADER */
-.hdr{background:var(--navy);padding:14px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.2);}
-.hdr-mark{width:36px;height:36px;background:var(--orange);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:12px;color:#fff;font-weight:500;flex-shrink:0;}
-.hdr-title{color:#fff;font-size:15px;font-weight:500;}
-.hdr-sub{color:rgba(255,255,255,.45);font-size:11px;}
-.hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
-.patient-input{background:rgba(255,255,255,.1);border:0.5px solid rgba(255,255,255,.2);border-radius:8px;padding:5px 10px;color:#fff;font-size:12px;font-family:inherit;width:110px;}
-.patient-input::placeholder{color:rgba(255,255,255,.35);}
+  .app {
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 0;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px 8px; gap: 10px; border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .brand h1 { margin: 0; font-size: 15px; font-weight: 900; letter-spacing: -0.03em; }
+  .brand p { margin: 0; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .status {
+    font-size: 11px; font-weight: 700; padding: 5px 9px; border-radius: 999px;
+    background: #1E2836; color: var(--muted); white-space: nowrap;
+  }
+  .status.live { color: var(--ok); background: rgba(93,220,154,.12); }
+  .status.busy { color: var(--en); background: rgba(244,213,141,.12); }
+  .status.err { color: var(--danger); background: rgba(240,113,120,.12); }
 
-/* PROGRESS */
-.progress-bar-wrap{background:rgba(255,255,255,.1);height:3px;}
-.progress-bar-fill{height:3px;background:var(--orange);transition:width .4s;width:0%;}
+  .stage {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 10px;
+    padding: 10px;
+  }
+  .cam-wrap, .board {
+    min-height: 0; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 16px; overflow: hidden; display: flex; flex-direction: column;
+  }
+  .cam-top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: 11px; color: var(--muted);
+  }
+  .cam-view { position: relative; flex: 1; min-height: 0; background: #05070A; }
+  video, canvas#preview, img#still {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #05070A;
+  }
+  canvas#preview, img#still { display: none; }
+  .roi {
+    position: absolute; left: 6%; right: 6%; border: 2px dashed rgba(244,213,141,.85);
+    border-radius: 10px; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,.28);
+  }
+  .roi.bottom { top: 62%; bottom: 8%; }
+  .roi.center { top: 28%; bottom: 28%; }
+  .roi.top { top: 8%; bottom: 62%; }
+  .roi.full { display: none; }
+  .cam-hint {
+    position: absolute; left: 12px; right: 12px; bottom: 12px;
+    background: rgba(11,15,20,.72); backdrop-filter: blur(8px);
+    border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+    font-size: 12px; line-height: 1.45; color: #D7DEE8;
+  }
+  .cam-hint strong { color: var(--en); }
 
-/* PAGE SHELL */
-.page-shell{max-width:700px;margin:0 auto;padding:12px 16px 88px;}
+  .board { padding: 0; }
+  .card {
+    flex: 1; min-height: 0; display: flex; flex-direction: column;
+    border-bottom: 1px solid var(--line); padding: 10px 12px 8px;
+  }
+  .card:last-child { border-bottom: none; }
+  .card.en { flex: 1.05; }
+  .card.ko { flex: 1.05; }
+  .card.words { flex: 1.15; }
+  .card.gram { flex: 1.25; }
+  .label {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .label span { opacity: .9; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .en .dot { background: var(--en); }
+  .ko .dot { background: var(--ko); }
+  .words .dot { background: var(--word); }
+  .gram .dot { background: var(--gram); }
+  .body {
+    flex: 1; min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch;
+    font-size: 15px; line-height: 1.55;
+  }
+  .en .body { font-family: "Source Serif 4", Georgia, serif; font-size: 18px; color: var(--en); font-weight: 600; }
+  .ko .body { color: var(--ko); font-weight: 700; font-size: 16px; }
+  .placeholder { color: var(--muted); font-size: 13px; font-weight: 500; font-family: inherit; }
+  .word-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .word {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 6px 8px; min-width: 92px;
+  }
+  .word b { display: block; color: var(--word); font-size: 13px; }
+  .word em { display: block; font-style: normal; color: #C5D0DE; font-size: 12px; font-weight: 700; }
+  .word small { display: block; color: var(--muted); font-size: 10px; margin-top: 2px; }
+  .gram-item { margin: 0 0 8px; }
+  .gram-item h3 { margin: 0 0 3px; font-size: 13px; color: var(--gram); }
+  .gram-item p { margin: 0; font-size: 12px; color: #D2DBE6; line-height: 1.5; }
+  .parts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+  .part {
+    font-size: 11px; font-weight: 700; padding: 4px 7px; border-radius: 8px;
+    background: #222B39; color: #D7E2F0;
+  }
+  .part i { font-style: normal; color: var(--muted); margin-right: 4px; }
 
-/* STEP CARD */
-.step-card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;margin-bottom:12px;transition:box-shadow .2s;}
-.step-card.active{border-color:var(--orange);box-shadow:0 0 0 3px rgba(243,124,32,.12);}
-.step-card.done-ok{border-color:var(--ok-border);opacity:.7;}
-.step-card.done-ng{border-color:var(--ng-border);}
-.step-card.locked{opacity:.35;pointer-events:none;}
+  footer {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    padding: 8px 10px 10px; border-top: 1px solid var(--line); background: #0E131A;
+  }
+  button, select, label.file {
+    appearance: none; border: 1px solid var(--line); background: var(--card); color: var(--text);
+    border-radius: 10px; padding: 8px 10px; font: 700 12px/1 "Noto Sans KR", sans-serif;
+    cursor: pointer;
+  }
+  button.primary { background: var(--accent); border-color: transparent; color: #fff; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.on { outline: 2px solid var(--ok); }
+  select { padding-right: 24px; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 12px) 55%, calc(100% - 7px) 55%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
+  label.file { display: inline-flex; align-items: center; }
+  label.file input { display: none; }
+  .grow { flex: 1; }
 
-.card-head{background:var(--navy);padding:10px 16px;display:flex;align-items:center;gap:8px;}
-.step-num{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;flex-shrink:0;}
-.card-head-title{color:#fff;font-size:13px;font-weight:500;flex:1;}
-.status-badge{font-size:10px;font-weight:500;padding:2px 8px;border-radius:12px;letter-spacing:.02em;}
-.badge-screen{background:rgba(255,255,255,.15);color:rgba(255,255,255,.8);}
-.badge-part{background:rgba(243,124,32,.3);color:#FFCC80;}
-.badge-ok{background:rgba(76,175,80,.25);color:#A5D6A7;}
-.badge-ng{background:rgba(243,124,32,.25);color:#FFCC80;}
-.badge-pain{background:rgba(229,57,53,.25);color:#EF9A9A;}
+  .boot {
+    position: fixed; inset: 0; z-index: 20; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; text-align: center; padding: 24px;
+  }
+  .boot h2 { margin: 0; font-size: 20px; }
+  .boot p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; max-width: 360px; }
+  .spin { width: 28px; height: 28px; border: 3px solid #2A3444; border-top-color: var(--en); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none !important; }
 
-/* PHOTO */
-.block-photo{padding:8px 16px 6px;}
-.block-title{font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--navy);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
-.block-title .num{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--navy);color:#fff;font-size:10px;font-family:'DM Mono',monospace;flex-shrink:0;}
-.photo-row{display:grid;gap:6px;margin:0;}
-.photo-row.single{grid-template-columns:1fr;}
-.photo-row.double{grid-template-columns:1fr 1fr;}
-.photo-row.grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));}
-.photo-card{border-radius:8px;overflow:hidden;border:0.5px solid var(--border);line-height:0;background:var(--surface);}
-.photo-frame{line-height:0;}
-.photo-card img{width:100%;height:auto;display:block;vertical-align:top;}
-.photo-row{align-content:start;}
-.photo-card{align-self:start;width:100%;}
-.photo-caption{padding:5px 10px;font-size:11px;line-height:1.45;color:var(--muted);background:var(--bg);border-top:0.5px solid var(--border);}
-.photo-empty{font-size:12px;color:var(--muted);padding:8px 12px;background:var(--bg);border-radius:8px;border:0.5px dashed var(--border);line-height:1.5;}
-
-/* CONTENT SECTIONS */
-.card-body{padding:12px 16px 14px;}
-.block-section{padding:10px 0;border-top:0.5px solid var(--border);}
-.block-section:first-child{border-top:none;padding-top:0;}
-.block-section:last-child{padding-bottom:0;}
-
-.info-section{margin-bottom:0;}
-.info-label{font-size:10px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
-.info-label .dot{width:6px;height:6px;border-radius:50%;background:var(--orange);}
-.info-label .dot.green{background:var(--ok);}
-.info-label .dot.red{background:#E53935;}
-.info-label .dot.blue{background:var(--teal);}
-
-.info-body{font-size:13px;line-height:1.8;color:var(--text);}
-.info-body ul{padding-left:16px;}
-.info-body li{margin-bottom:3px;}
-
-.normal-tag{display:inline-block;background:#E8F5E9;color:#1B5E20;border:0.5px solid #4CAF50;border-radius:6px;padding:1px 8px;font-size:11px;font-weight:500;margin:2px;}
-.comp-tag{display:inline-block;background:#FFEBEE;color:#B71C1C;border:0.5px solid #EF9A9A;border-radius:12px;padding:2px 9px;font-size:11px;margin:2px;}
-
-/* RESULT BTNS */
-.result-section{padding:0;}
-.block-check .result-label-row{margin-bottom:8px;}
-.result-label-row{font-size:12px;color:var(--muted);margin-bottom:8px;}
-.btn-group{display:flex;gap:8px;flex-wrap:wrap;}
-.r-btn{padding:8px 20px;font-size:13px;font-weight:500;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all .15s;font-family:inherit;}
-.r-btn:hover{border-color:#aaa;color:var(--text);}
-.r-btn.sel-ok{background:var(--ok-bg);border-color:var(--ok-border);color:var(--ok);}
-.r-btn.sel-ng{background:var(--ng-bg);border-color:var(--ng-border);color:var(--ng);}
-.r-btn.sel-pain{background:var(--pain-bg);border-color:var(--pain-border);color:var(--pain);}
-
-/* VAS */
-.vas-row{display:flex;align-items:center;gap:10px;margin-top:8px;}
-.vas-label-txt{font-size:12px;color:var(--muted);min-width:35px;}
-.vas-val{font-size:14px;font-weight:500;min-width:22px;font-family:'DM Mono',monospace;color:var(--pain);}
-input[type=range]{flex:1;}
-
-/* CM */
-.cm-block{margin-top:8px;}
-.cm-row{display:flex;align-items:center;gap:8px;}
-.cm-label-txt{font-size:12px;color:var(--muted);}
-.cm-input{width:72px;padding:6px 8px;font-size:15px;border:1px solid var(--border);border-radius:6px;background:#FAFAF8;color:var(--text);font-family:'DM Mono',monospace;text-align:center;}
-.cm-input:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 2px rgba(243,124,32,.15);}
-.cm-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;max-width:252px;}
-.cm-key{padding:11px 0;font-size:17px;font-weight:500;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);cursor:pointer;font-family:'DM Mono',monospace;transition:background .1s,border-color .1s;-webkit-tap-highlight-color:transparent;}
-.cm-key:active{background:var(--bg);}
-.cm-key.cm-key-accent{background:rgba(243,124,32,.08);border-color:rgba(243,124,32,.35);color:var(--orange);font-size:18px;}
-.cm-key.cm-key-wide{grid-column:span 2;}
-.cm-del{padding:4px 10px;font-size:11px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--muted);cursor:pointer;margin-left:4px;font-family:inherit;}
-.cm-del:active{background:var(--bg);}
-
-/* LR CHECKER */
-.lr-check-grid{display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;}
-.lr-side{display:flex;flex-direction:column;align-items:flex-start;gap:4px;}
-.lr-side-label{font-size:11px;font-weight:500;color:var(--muted);}
-.lr-btns{display:flex;gap:4px;}
-.lr-btn{padding:4px 12px;font-size:12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all .15s;font-family:inherit;}
-.lr-btn.ok{background:#E8F5E9;border-color:#4CAF50;color:var(--ok);}
-.lr-btn.ng{background:#FFEBEE;border-color:#E53935;color:var(--pain);}
-
-/* KEY ITEM */
-.key-item-row{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:8px;background:var(--yellow-bg);border:1px solid var(--yellow-border);margin-bottom:6px;}
-.normal-item-row{display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:8px;background:#FAFAF8;border:.5px solid var(--border);margin-bottom:6px;margin-left:20px;}
-.pos-tag{font-size:10px;font-weight:500;padding:2px 7px;border-radius:10px;font-family:'DM Mono',monospace;flex-shrink:0;}
-.pos-K{background:#EDE7F6;color:#4527A0;}
-.pos-P{background:#E3F2FD;color:#0D47A1;}
-.pos-S{background:#E8F5E9;color:#1B5E20;}
-.pos-Sit{background:#FFF3E0;color:#BF360C;font-size:9px;}
-.item-name{font-size:12px;flex:1;}
-.passive-label{font-size:11px;color:var(--muted);}
-
-/* PART SECTION */
-.part-section-title{font-size:10px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
-.part-section-title.active-lbl{color:var(--orange);}
-.part-section-title.passive-lbl{color:var(--teal);}
-
-/* EXERCISE SECTION */
-.exercise-card{background:var(--navy);border-radius:8px;padding:12px 14px;margin-top:4px;}
-.exercise-title{color:rgba(255,255,255,.5);font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;}
-.exercise-item{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:.5px solid rgba(255,255,255,.08);}
-.exercise-item:last-child{border-bottom:none;padding-bottom:0;}
-.ex-num{width:20px;height:20px;border-radius:50%;background:var(--orange);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'DM Mono',monospace;}
-.ex-text{font-size:12px;color:rgba(255,255,255,.85);line-height:1.6;flex:1;}
-
-/* NOTE */
-.note-area{width:100%;padding:8px 10px;font-size:12px;font-family:inherit;border:.5px solid var(--border);border-radius:8px;background:#FAFAF8;color:var(--text);resize:vertical;min-height:50px;margin-top:8px;}
-.note-area::placeholder{color:#bbb;}
-
-/* NEXT FLOW BTN */
-.next-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;background:var(--navy);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:opacity .15s;margin-top:12px;}
-.next-btn:hover{opacity:.87;}
-.next-btn .arrow{font-size:16px;}
-
-/* SUMMARY */
-.summary-wrap{background:var(--navy);border-radius:var(--radius);padding:18px;margin-top:24px;}
-.summary-title{color:#fff;font-size:14px;font-weight:500;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
-.copy-btn{padding:5px 14px;font-size:12px;font-weight:500;border-radius:20px;background:var(--orange);border:none;color:#fff;cursor:pointer;font-family:inherit;}
-.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
-.sum-item{background:rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;}
-.sum-item-label{font-size:11px;color:rgba(255,255,255,.45);margin-bottom:3px;}
-.sum-item-val{font-size:13px;font-weight:500;color:#fff;}
-.sum-item-val.ok{color:#A5D6A7;}
-.sum-item-val.ng{color:#FFCC80;}
-.sum-item-val.pain{color:#EF9A9A;}
-.findings-row{background:rgba(255,255,255,.05);border-radius:8px;padding:10px 12px;}
-.findings-lbl{font-size:11px;color:rgba(255,255,255,.45);margin-bottom:6px;}
-.f-tag{display:inline-block;background:rgba(243,124,32,.2);color:#FFCC80;border:.5px solid rgba(243,124,32,.3);border-radius:12px;padding:3px 10px;font-size:11px;margin:2px;}
-.progress-foot{height:3px;background:rgba(255,255,255,.1);border-radius:2px;margin-top:12px;}
-.progress-foot-fill{height:100%;background:var(--orange);border-radius:2px;transition:width .4s;}
-
-/* SECTION DIVIDERS */
-/* PAGE NAV */
-.page-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:10px 12px calc(10px + env(safe-area-inset-bottom));z-index:300;box-shadow:0 -4px 16px rgba(0,0,0,.06);}
-.page-nav-inner{max-width:700px;margin:0 auto;display:flex;gap:8px;align-items:center;}
-.nav-btn{padding:10px 14px;font-size:13px;font-weight:500;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);cursor:pointer;font-family:inherit;white-space:nowrap;}
-.nav-btn:disabled{opacity:.35;cursor:not-allowed;}
-.nav-btn-primary{background:var(--navy);color:#fff;border-color:var(--navy);}
-.page-select{flex:1;min-width:0;padding:9px 10px;font-size:12px;border:1px solid var(--border);border-radius:10px;background:#FAFAF8;font-family:inherit;}
-.nav-btn-home{flex-shrink:0;background:rgba(243,124,32,.12);border-color:rgba(243,124,32,.4);color:var(--orange);}
-
-/* 좌/우 기록 패널 */
-.side-panels{display:grid;gap:10px;margin-top:8px;}
-.side-panel{border:1px solid var(--border);border-radius:10px;padding:12px;background:#FAFAF8;}
-.side-panel-head{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:10px;padding-bottom:8px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:8px;}
-.side-panel-head .side-tag{font-size:10px;padding:2px 8px;border-radius:10px;background:var(--navy);color:#fff;font-family:'DM Mono',monospace;}
-.confirm-row{margin-top:12px;}
-.confirm-row .next-btn{margin-top:0;}
-.confirm-hint{font-size:11px;color:var(--muted);margin-bottom:8px;text-align:center;}
-
-/* 홈 */
-.home-wrap{padding:4px 0;}
-.home-title{font-size:16px;font-weight:600;color:var(--navy);margin-bottom:4px;}
-.home-desc{font-size:12px;color:var(--muted);margin-bottom:14px;}
-.home-grid{display:grid;gap:8px;}
-.home-card{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;cursor:pointer;text-align:left;font-family:inherit;width:100%;transition:border-color .15s,box-shadow .15s;}
-.home-card:hover{border-color:var(--orange);}
-.home-card.done-ok{border-color:var(--ok-border);}
-.home-card.done-ng{border-color:var(--ng-border);}
-.home-card-num{width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;flex-shrink:0;}
-.home-card-body{flex:1;min-width:0;}
-.home-card-label{font-size:13px;font-weight:500;color:var(--text);}
-.home-card-sub{font-size:11px;color:var(--muted);margin-top:2px;}
-.home-card-status{font-size:11px;font-weight:500;flex-shrink:0;}
-.home-card-status.ok{color:var(--ok);}
-.home-card-status.ng{color:var(--ng);}
-.home-card-status.pending{color:var(--muted);}
-.part-criteria-hint{font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5;}
-.key-criteria-row{font-size:12px;padding:6px 0;border-bottom:0.5px solid var(--border);line-height:1.6;}
-.key-criteria-row:last-child{border-bottom:none;}
-
-/* 평가법 외 정보 — 접기/펼치기 (기본 접힘) */
-.meta-collapse{border:none;margin:0;}
-.meta-collapse-summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;padding:0;margin-bottom:0;user-select:none;-webkit-tap-highlight-color:transparent;}
-.meta-collapse-summary::-webkit-details-marker{display:none;}
-.meta-collapse-summary .num{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--navy);color:#fff;font-size:10px;font-family:'DM Mono',monospace;flex-shrink:0;}
-.meta-collapse-label{font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--navy);flex:1;}
-.meta-collapse-icon{width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;transition:transform .2s;flex-shrink:0;}
-.meta-collapse-icon::before{content:'▶';}
-.meta-collapse[open] .meta-collapse-icon{transform:rotate(90deg);}
-.meta-collapse-body{padding-top:10px;}
-.meta-collapse-body .info-section{margin-bottom:10px;}
-.meta-collapse-body .info-section:last-child{margin-bottom:0;}
-.check-note-block{margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border);}
-.check-note-block .note-area{margin-top:0;}
-.check-note-block .next-btn{margin-top:10px;}
-.check-note-readonly .info-label{font-size:10px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
-
-@media(max-width:500px){
-  .photo-row.double{grid-template-columns:1fr;}
-  .summary-grid{grid-template-columns:1fr;}
-}
+  @media (max-width: 820px) and (orientation: portrait) {
+    .stage { grid-template-columns: 1fr; grid-template-rows: 38vh 1fr; }
+    .en .body { font-size: 16px; }
+    .brand p { display: none; }
+  }
 </style>
-
+</head>
 <body>
+<div class="boot" id="boot">
+  <div class="spin" aria-hidden="true"></div>
+  <h2>영어 게임 실시간 번역</h2>
+  <p id="bootMsg">문자 인식 엔진을 준비하고 있습니다. 첫 실행만 조금 걸려요.</p>
+</div>
 
-<header class="hdr">
-  <div class="hdr-mark">CMT</div>
-  <div>
-    <div class="hdr-title">Movement Screen</div>
-    <div class="hdr-sub" id="hdrPageTitle">평가 진행</div>
-  </div>
-  <div class="hdr-right">
-    <input class="patient-input" type="text" id="patientName" placeholder="회원 이름">
-    <input class="patient-input" type="date" id="assessDate" style="width:130px;">
-  </div>
-</header>
-<div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressFill"></div></div>
+<div class="app">
+  <header>
+    <div class="brand">
+      <h1>게임 화면 영어 번역</h1>
+      <p>카메라를 대사·자막에 맞추면 왼쪽은 영상, 오른쪽은 해석이 실시간으로 바뀝니다</p>
+    </div>
+    <div class="status" id="status">준비 중</div>
+  </header>
 
-<main class="page-shell">
-  <div id="pageView"></div>
-</main>
+  <main class="stage">
+    <section class="cam-wrap">
+      <div class="cam-top">
+        <span>카메라 화면</span>
+        <span id="camMeta">대기</span>
+      </div>
+      <div class="cam-view">
+        <video id="video" playsinline muted autoplay></video>
+        <img id="still" alt="선택한 사진">
+        <div class="roi bottom" id="roi"></div>
+        <div class="cam-hint" id="hint">
+          <strong>카메라 시작</strong>을 누른 뒤 게임 자막이 노란 점선 안에 들어오게 비추세요.
+          사파리에서 공유 → <strong>홈 화면에 추가</strong>하면 앱처럼 쓸 수 있습니다.
+        </div>
+      </div>
+    </section>
 
-<nav class="page-nav" aria-label="페이지 이동">
-  <div class="page-nav-inner">
-    <button type="button" class="nav-btn nav-btn-home" onclick="goHome()" aria-label="홈으로">홈</button>
-    <button type="button" class="nav-btn" id="navPrev" onclick="navPrev()">← 이전</button>
-    <select class="page-select" id="pageSelect" onchange="goToPage(this.value)" aria-label="평가 항목 선택"></select>
-    <button type="button" class="nav-btn nav-btn-primary" id="navNext" onclick="navNext()">다음 →</button>
-  </div>
-</nav>
+    <aside class="board">
+      <section class="card en">
+        <div class="label"><span><i class="dot"></i>영어 자막</span><span id="enMeta"></span></div>
+        <div class="body placeholder" id="enText">아직 인식된 문장이 없습니다.</div>
+      </section>
+      <section class="card ko">
+        <div class="label"><span><i class="dot"></i>한글 번역</span></div>
+        <div class="body placeholder" id="koText">영어가 잡히면 바로 한국어로 보여줍니다.</div>
+      </section>
+      <section class="card words">
+        <div class="label"><span><i class="dot"></i>단어 뜻</span></div>
+        <div class="body placeholder" id="wordBox">핵심 단어의 뜻과 품사가 여기에 뜹니다.</div>
+      </section>
+      <section class="card gram">
+        <div class="label"><span><i class="dot"></i>문법 · 해석 방법</span></div>
+        <div class="body placeholder" id="gramBox">시제, 조동사, 어순을 어떻게 읽으면 좋은지 알려줍니다.</div>
+      </section>
+    </aside>
+  </main>
 
-<script src="pages_data.js"></script>
-<script src="cmt_app.js"></script>
+  <footer>
+    <button class="primary" id="btnStart" type="button">카메라 시작</button>
+    <button id="btnScan" type="button" disabled>지금 인식</button>
+    <button id="btnAuto" type="button" disabled>자동 인식</button>
+    <select id="region" aria-label="인식 영역">
+      <option value="bottom" selected>하단 자막</option>
+      <option value="center">화면 중앙</option>
+      <option value="top">상단 글자</option>
+      <option value="full">화면 전체</option>
+    </select>
+    <label class="file">사진 선택<input id="file" type="file" accept="image/*"></label>
+    <span class="grow"></span>
+    <button id="btnClear" type="button">지우기</button>
+  </footer>
+</div>
+
+<canvas id="work" class="hidden"></canvas>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const video = $("video");
+  const still = $("still");
+  const work = $("work");
+  const roi = $("roi");
+  const hint = $("hint");
+
+  const STOP = new Set("a an the and or but if so to of in on at by for from with as is am are was were be been being i you he she it we they this that these those there here not no yes do does did done have has had will would can could should may might must own my your his her our their what who whom whose which when where why how than then too very just also only even into over after before about up out off than".split(" "));
+
+  const LOCAL_DICT = {
+    go: ["가다", "동사"], come: ["오다", "동사"], get: ["얻다/되다", "동사"], make: ["만들다", "동사"],
+    take: ["가져가다/걸리다", "동사"], give: ["주다", "동사"], find: ["찾다", "동사"], look: ["보다/살펴보다", "동사"],
+    see: ["보다", "동사"], know: ["알다", "동사"], think: ["생각하다", "동사"], want: ["원하다", "동사"],
+    need: ["필요하다", "동사"], try: ["시도하다", "동사"], help: ["돕다", "동사"], wait: ["기다리다", "동사"],
+    leave: ["떠나다", "동사"], stay: ["머무르다", "동사"], open: ["열다", "동사"], close: ["닫다", "동사"],
+    run: ["달리다/운영하다", "동사"], walk: ["걷다", "동사"], talk: ["말하다", "동사"], tell: ["말해주다", "동사"],
+    ask: ["묻다", "동사"], say: ["말하다", "동사"], speak: ["말하다", "동사"], hear: ["듣다", "동사"],
+    feel: ["느끼다", "동사"], keep: ["유지하다", "동사"], let: ["하게 하다", "동사"], put: ["놓다", "동사"],
+    use: ["사용하다", "동사"], start: ["시작하다", "동사"], stop: ["멈추다", "동사"], move: ["움직이다", "동사"],
+    fight: ["싸우다", "동사"], kill: ["죽이다", "동사"], die: ["죽다", "동사"], live: ["살다", "동사"],
+    save: ["구하다/저장하다", "동사"], protect: ["보호하다", "동사"], follow: ["따라가다", "동사"],
+    remember: ["기억하다", "동사"], forget: ["잊다", "동사"], believe: ["믿다", "동사"],
+    choose: ["고르다", "동사"], decide: ["결정하다", "동사"], happen: ["일어나다", "동사"],
+    become: ["되다", "동사"], seem: ["~인 것 같다", "동사"], appear: ["나타나다", "동사"],
+    please: ["제발/~해 주세요", "감탄·동사"], sorry: ["미안한", "형용사"], thank: ["감사하다", "동사"],
+    hello: ["안녕", "감탄사"], goodbye: ["안녕(작별)", "감탄사"], yes: ["응/네", "감탄사"], no: ["아니", "감탄사"],
+    now: ["지금", "부사"], then: ["그때/그러면", "부사"], here: ["여기", "부사"], there: ["거기", "부사"],
+    again: ["다시", "부사"], still: ["아직", "부사"], already: ["이미", "부사"], never: ["절대 ~않다", "부사"],
+    always: ["항상", "부사"], maybe: ["어쩌면", "부사"], really: ["정말", "부사"],
+    people: ["사람들", "명사"], friend: ["친구", "명사"], family: ["가족", "명사"],
+    world: ["세계", "명사"], time: ["시간", "명사"], way: ["방법/길", "명사"], thing: ["것/일", "명사"],
+    place: ["장소", "명사"], door: ["문", "명사"], room: ["방", "명사"], house: ["집", "명사"],
+    city: ["도시", "명사"], map: ["지도", "명사"], key: ["열쇠/핵심", "명사"],
+    quest: ["퀘스트", "명사"], mission: ["임무", "명사"], item: ["아이템", "명사"],
+    weapon: ["무기", "명사"], sword: ["검", "명사"], magic: ["마법", "명사"],
+    enemy: ["적", "명사"], monster: ["몬스터", "명사"], boss: ["보스", "명사"],
+    health: ["체력", "명사"], power: ["힘", "명사"], gold: ["골드", "명사"],
+    danger: ["위험", "명사"], safe: ["안전한", "형용사"], ready: ["준비된", "형용사"],
+    right: ["맞는/오른쪽", "형용사"], wrong: ["틀린", "형용사"], true: ["진실한", "형용사"],
+    false: ["거짓의", "형용사"], good: ["좋은", "형용사"], bad: ["나쁜", "형용사"],
+    new: ["새로운", "형용사"], old: ["오래된", "형용사"], last: ["마지막의", "형용사"],
+    next: ["다음의", "형용사"], first: ["첫 번째의", "형용사"],
+    important: ["중요한", "형용사"], different: ["다른", "형용사"],
+    possible: ["가능한", "형용사"], impossible: ["불가능한", "형용사"],
+    dead: ["죽은", "형용사"], alive: ["살아있는", "형용사"],
+    lost: ["길을 잃은/잃어버린", "형용사"], found: ["발견된", "형용사"],
+    left: ["남긴/왼쪽", "형용사"], gone: ["사라진", "형용사"]
+  };
+
+  let worker = null;
+  let stream = null;
+  let looping = false;
+  let busy = false;
+  let lastText = "";
+  let lastHash = "";
+  let usingStill = false;
+
+  function setStatus(text, kind) {
+    $("status").textContent = text;
+    $("status").className = "status" + (kind ? " " + kind : "");
+  }
+
+  function setBody(el, html, empty) {
+    el.classList.toggle("placeholder", !!empty);
+    el.innerHTML = html;
+  }
+
+  function regionBox() {
+    const mode = $("region").value;
+    roi.className = "roi " + mode;
+    if (mode === "full") return { x: 0, y: 0, w: 1, h: 1 };
+    if (mode === "top") return { x: 0.06, y: 0.08, w: 0.88, h: 0.30 };
+    if (mode === "center") return { x: 0.06, y: 0.28, w: 0.88, h: 0.44 };
+    return { x: 0.06, y: 0.62, w: 0.88, h: 0.30 };
+  }
+
+  async function initOcr() {
+    worker = await Tesseract.createWorker("eng", 1, {
+      logger: (m) => {
+        if (m.status === "loading tesseract core") $("bootMsg").textContent = "인식 엔진 로딩 중…";
+        if (m.status === "initializing tesseract") $("bootMsg").textContent = "엔진 초기화 중…";
+        if (m.status === "loading language traineddata") $("bootMsg").textContent = "영어 데이터 받는 중…";
+        if (m.status === "recognizing text" && m.progress) {
+          setStatus("인식 " + Math.round(m.progress * 100) + "%", "busy");
+        }
+      }
+    });
+    await worker.setParameters({
+      tessedit_pageseg_mode: "6",
+      tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,!?'\":;- "
+    });
+    $("boot").classList.add("hidden");
+    setStatus("준비됨");
+  }
+
+  function grabFrame() {
+    const src = usingStill ? still : video;
+    if (!usingStill && (!src.videoWidth || src.readyState < 2)) return null;
+    if (usingStill && (!src.naturalWidth)) return null;
+    const sw = usingStill ? src.naturalWidth : src.videoWidth;
+    const sh = usingStill ? src.naturalHeight : src.videoHeight;
+    const box = regionBox();
+    const sx = Math.floor(sw * box.x);
+    const sy = Math.floor(sh * box.y);
+    const cw = Math.max(40, Math.floor(sw * box.w));
+    const ch = Math.max(40, Math.floor(sh * box.h));
+    const scale = cw < 900 ? 2.2 : 1.6;
+    work.width = Math.floor(cw * scale);
+    work.height = Math.floor(ch * scale);
+    const ctx = work.getContext("2d", { willReadFrequently: true });
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(src, sx, sy, cw, ch, 0, 0, work.width, work.height);
+    const img = ctx.getImageData(0, 0, work.width, work.height);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      const v = g < 140 ? 0 : 255;
+      d[i] = d[i + 1] = d[i + 2] = v;
+    }
+    ctx.putImageData(img, 0, 0);
+    return work;
+  }
+
+  function cleanOcr(raw) {
+    return raw
+      .replace(/[|]/g, "I")
+      .replace(/[“”]/g, '"')
+      .replace(/[‘’]/g, "'")
+      .split(/\n+/)
+      .map((line) => line.replace(/\s+/g, " ").trim())
+      .filter((line) => line.length >= 2 && /[A-Za-z]/.test(line))
+      .join(" ")
+      .replace(/\s+([,.!?;:])/g, "$1")
+      .trim();
+  }
+
+  function similar(a, b) {
+    if (!a || !b) return false;
+    if (a === b) return true;
+    const na = a.toLowerCase();
+    const nb = b.toLowerCase();
+    if (na.includes(nb) || nb.includes(na)) return true;
+    let same = 0;
+    const n = Math.min(na.length, nb.length);
+    for (let i = 0; i < n; i++) if (na[i] === nb[i]) same++;
+    return same / Math.max(na.length, nb.length) > 0.86;
+  }
+
+  async function translateKo(text) {
+    const q = encodeURIComponent(text.slice(0, 500));
+    try {
+      const r = await fetch("https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ko&dt=t&q=" + q);
+      if (r.ok) {
+        const j = await r.json();
+        const out = (j[0] || []).map((x) => x[0]).join("");
+        if (out) return out;
+      }
+    } catch (e) {}
+    try {
+      const r = await fetch("https://api.mymemory.translated.net/get?q=" + q + "&langpair=en|ko");
+      const j = await r.json();
+      return (j.responseData && j.responseData.translatedText) || "";
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function tokenize(text) {
+    return text
+      .replace(/[^A-Za-z' \-]/g, " ")
+      .split(/\s+/)
+      .map((w) => w.replace(/^'+|'+$/g, ""))
+      .filter(Boolean);
+  }
+
+  function lemma(word) {
+    const w = word.toLowerCase();
+    if (w.length > 4 && /ies$/.test(w)) return w.slice(0, -3) + "y";
+    if (w.length > 3 && /ses$|xes$|zes$|ches$|shes$/.test(w)) return w.slice(0, -2);
+    if (w.length > 3 && /s$/.test(w) && !/ss$/.test(w)) return w.slice(0, -1);
+    if (w.length > 5 && /ning$|ting$|ming$/.test(w)) return w.slice(0, -4);
+    if (w.length > 4 && /ing$/.test(w)) return w.slice(0, -3);
+    if (w.length > 4 && /ied$/.test(w)) return w.slice(0, -3) + "y";
+    if (w.length > 3 && /ed$/.test(w)) return w.slice(0, -2);
+    return w;
+  }
+
+  async function wordMeanings(text) {
+    const seen = new Set();
+    const picks = [];
+    for (const raw of tokenize(text)) {
+      const key = lemma(raw);
+      if (STOP.has(key) || key.length < 2 || seen.has(key)) continue;
+      seen.add(key);
+      picks.push({ raw, key });
+      if (picks.length >= 10) break;
+    }
+    const cards = [];
+    for (const p of picks) {
+      const local = LOCAL_DICT[p.key];
+      if (local) {
+        cards.push({ en: p.raw, ko: local[0], pos: local[1] });
+        continue;
+      }
+      try {
+        const r = await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(p.key));
+        if (r.ok) {
+          const j = await r.json();
+          const m = j[0] && j[0].meanings && j[0].meanings[0];
+          const def = m && m.definitions && m.definitions[0] && m.definitions[0].definition;
+          const pos = m && m.partOfSpeech;
+          const ko = def ? await translateKo(p.key + ": " + def) : await translateKo(p.key);
+          cards.push({ en: p.raw, ko: ko || p.key, pos: pos || "" });
+          continue;
+        }
+      } catch (e) {}
+      const ko = await translateKo(p.key);
+      cards.push({ en: p.raw, ko: ko || "(뜻 검색 실패)", pos: "" });
+    }
+    return cards;
+  }
+
+  function grammar(text) {
+    const t = text.trim();
+    const low = t.toLowerCase();
+    const items = [];
+    const parts = [];
+
+    const q = /^(who|what|when|where|why|how|which|whose)\b/.test(low);
+    const yn = /^(do|does|did|is|are|am|was|were|can|could|will|would|have|has|had|should|may|might)\b/.test(low) && /\?/.test(t);
+    if (q) {
+      items.push({
+        title: "의문사 의문문",
+        expl: "Who/What/When/Where/Why/How가 앞에 있으면 「의문사 + 조동사/be + 주어 + 동사」 순으로 읽습니다. 한국어로는 의문사를 뒤로 보내 「…니/…까?」로 옮기면 자연합니다."
+      });
+      parts.push(["의문사", "질문의 핵심"]);
+    } else if (yn || /\?$/.test(t)) {
+      items.push({
+        title: "Yes/No 의문문",
+        expl: "Do/Does/Did나 be동사가 문장 맨 앞에 있으면 대답이 예/아니요인 질문입니다. 한국어로는 「…니? / …인가요?」로 옮깁니다."
+      });
+    }
+
+    if (/\b(am|is|are|was|were)\s+\w+ing\b/i.test(t)) {
+      items.push({
+        title: "진행형 (be + 동사ing)",
+        expl: "지금 벌어지고 있거나, 그 장면 속에서 계속되는 동작입니다. 「~하고 있다」로 먼저 옮긴 뒤 주어를 붙이세요."
+      });
+      parts.push(["진행", "현장감"]);
+    }
+    if (/\b(have|has|had)\s+\w+(ed|en|n)\b/i.test(t) || /\b(have|has|had)\s+(been|gone|done|seen|taken|made|left|found|come)\b/i.test(t)) {
+      items.push({
+        title: "완료형 (have + 과거분사)",
+        expl: "과거에 일어난 일이 지금과 이어질 때 씁니다. 「이미 ~했다 / ~한 상태다」로 해석하면 게임 대사와 잘 맞습니다."
+      });
+      parts.push(["완료", "결과·경험"]);
+    }
+    if (/\b(will|won't|'ll)\b/i.test(t) || /\bgoing to\b/i.test(t)) {
+      items.push({
+        title: "미래 · 의지",
+        expl: "will은 그 자리에서 정한 의지, going to는 이미 예정된 일에 가깝습니다. 「~할 거야 / ~할 예정이다」."
+      });
+      parts.push(["미래", "앞으로의 일"]);
+    }
+    if (/\b(can|could|may|might|must|should|shall|would)\b/i.test(t)) {
+      items.push({
+        title: "조동사",
+        expl: "can=할 수 있다, could=할 수 있었다/~해도 될까, must=반드시, should=~하는 게 좋다, may/might=~일지도, would=~할 텐데. 조동사를 먼저 번역한 다음 본동사를 붙입니다."
+      });
+      parts.push(["조동사", "가능성·의무"]);
+    }
+    if (/\b(am|is|are|was|were|be|been|being)\s+\w+(ed|en)\b/i.test(t) || /\b(is|are|was|were)\s+(called|made|known|found|taken|given|told|done)\b/i.test(t)) {
+      items.push({
+        title: "수동태 (be + 과거분사)",
+        expl: "주어가 행동을 하는 쪽이 아니라 「당하는/되어지는」 쪽입니다. 「~당하다 / ~되다 / ~라고 불린다」로 읽으세요."
+      });
+    }
+    if (/\bif\b/i.test(t) && /\b(will|would|can|could)\b/i.test(t)) {
+      items.push({
+        title: "조건문 If",
+        expl: "If + 현재, will = 실제 가능한 가정. If + 과거, would = 지금과 다른 가상. 「만약 ~라면 / ~라면 ~할 텐데」."
+      });
+      parts.push(["조건", "만약 ~라면"]);
+    }
+    if (/^(please|don't|do not|let's|come on|look|wait|stop|go|run|help)\b/i.test(low) || (/^[A-Z][a-z]+\b/.test(t) && !/\b(i|you|he|she|we|they|it)\b/i.test(t.split(" ").slice(0, 3).join(" ")))) {
+      if (/^(please|don't|do not|let's|wait|stop|go|run|help|look|come)\b/i.test(low)) {
+        items.push({
+          title: "명령 · 부탁",
+          expl: "주어 You가 생략된 경우가 많습니다. 「~해 / ~해 줘 / ~하지 마」로 짧게 옮기는 게 게임 대사답습니다."
+        });
+        parts.push(["명령", "상대에게 시킴"]);
+      }
+    }
+    if (/\b(don't|doesn't|didn't|isn't|aren't|wasn't|weren't|won't|can't|couldn't|haven't|hasn't)\b/i.test(t) || /\bnot\b/i.test(t)) {
+      items.push({
+        title: "부정문",
+        expl: "조동사/be 뒤에 not이 붙습니다. 한국어에서는 동사 앞에 「안 / 못 / ~가 아니다」를 넣습니다."
+      });
+    }
+    if (/\b(because|so|but|although|though|when|while|before|after|until|since)\b/i.test(t)) {
+      items.push({
+        title: "접속사로 이어진 문장",
+        expl: "because=때문에, so=그래서, but=하지만, when=할 때, before/after=전에/후에. 접속사 뒤를 한 덩어리로 묶은 다음 앞문장과 연결하세요."
+      });
+    }
+    if (/\b(to)\s+[a-z]+\b/i.test(t) && /\b(want|need|try|have|forget|remember|decide|start|stop|go)\b/i.test(t)) {
+      items.push({
+        title: "to부정사 (목적)",
+        expl: "want to / need to / try to 는 「~하고 싶다 / ~해야 한다 / ~하려고 하다」입니다. to 뒤 동사는 절대 현재형으로 고정됩니다."
+      });
+    }
+
+    const tokens = tokenize(t);
+    if (tokens.length) {
+      const first = tokens[0];
+      const verbish = tokens.find((w, i) => i > 0 && !STOP.has(w.toLowerCase())) || tokens[1] || "";
+      parts.unshift(["주어 후보", first], ["핵심 동작", verbish || "—"]);
+    }
+
+    if (!items.length) {
+      items.push({
+        title: "기본 어순 S + V + O",
+        expl: "영어는 「누가 + 뭐 한다 + 무엇을」 순입니다. 한국어로 옮길 때는 뒤를 앞으로 끌어 「누가 무엇을 ~한다」로 재배열하세요."
+      });
+    }
+
+    items.push({
+      title: "실시간 해석 순서",
+      expl: "① 문장 끝 문장부호로 평서/질문/감탄을 본다 → ② 조동사·시제를 표시한다 → ③ 주어와 본동사를 찾는다 → ④ 나머지 명사·형용사를 수식어로 붙인다."
+    });
+
+    return { items: items.slice(0, 4), parts };
+  }
+
+  function renderWords(cards) {
+    if (!cards.length) {
+      setBody($("wordBox"), "이번 문장에서 따로 볼 단어가 거의 없습니다.", true);
+      return;
+    }
+    $("wordBox").classList.remove("placeholder");
+    $("wordBox").innerHTML = '<div class="word-list">' + cards.map((c) =>
+      '<div class="word"><b>' + escapeHtml(c.en) + "</b><em>" + escapeHtml(c.ko) + "</em>" +
+      (c.pos ? "<small>" + escapeHtml(c.pos) + "</small>" : "") + "</div>"
+    ).join("") + "</div>";
+  }
+
+  function renderGram(g) {
+    $("gramBox").classList.remove("placeholder");
+    $("gramBox").innerHTML =
+      g.items.map((it) => '<div class="gram-item"><h3>' + escapeHtml(it.title) + "</h3><p>" + escapeHtml(it.expl) + "</p></div>").join("") +
+      (g.parts.length ? '<div class="parts">' + g.parts.map((p) => '<span class="part"><i>' + escapeHtml(p[0]) + "</i>" + escapeHtml(p[1]) + "</span>").join("") + "</div>" : "");
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  async function analyze(text) {
+    setBody($("enText"), escapeHtml(text), false);
+    $("enMeta").textContent = text.split(/\s+/).length + " words";
+    setBody($("koText"), "번역 중…", true);
+    setBody($("wordBox"), "단어 찾는 중…", true);
+    setBody($("gramBox"), "문법 분석 중…", true);
+    const [ko, words] = await Promise.all([translateKo(text), wordMeanings(text)]);
+    setBody($("koText"), escapeHtml(ko || "번역을 가져오지 못했습니다. 네트워크를 확인해 주세요."), !ko);
+    renderWords(words);
+    renderGram(grammar(text));
+  }
+
+  async function scan() {
+    if (busy || !worker) return;
+    const frame = grabFrame();
+    if (!frame) return;
+    busy = true;
+    setStatus("화면 읽는 중", "busy");
+    try {
+      const result = await worker.recognize(frame);
+      const text = cleanOcr(result.data.text || "");
+      const conf = result.data.confidence || 0;
+      if (!text || text.length < 3 || conf < 28) {
+        setStatus(looping ? "자동 인식 중" : "글자를 못 찾음", looping ? "live" : "");
+        return;
+      }
+      if (similar(text, lastText)) {
+        setStatus(looping ? "같은 문장 · 대기" : "인식됨", looping ? "live" : "");
+        return;
+      }
+      lastText = text;
+      await analyze(text);
+      setStatus(looping ? "자동 인식 중" : "인식 완료", looping ? "live" : "");
+    } catch (err) {
+      setStatus("인식 오류", "err");
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function loop() {
+    while (looping) {
+      await scan();
+      await new Promise((r) => setTimeout(r, 1600));
+    }
+  }
+
+  async function startCamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setStatus("이 브라우저는 카메라 불가", "err");
+      return;
+    }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }
+      });
+      video.srcObject = stream;
+      await video.play();
+      usingStill = false;
+      still.style.display = "none";
+      video.style.display = "block";
+      hint.classList.add("hidden");
+      $("camMeta").textContent = "후면 카메라";
+      $("btnScan").disabled = false;
+      $("btnAuto").disabled = false;
+      $("btnStart").textContent = "카메라 끄기";
+      setStatus("카메라 켜짐", "live");
+    } catch (err) {
+      setStatus("카메라 권한을 허용해 주세요", "err");
+    }
+  }
+
+  function stopCamera() {
+    looping = false;
+    $("btnAuto").classList.remove("on");
+    $("btnAuto").textContent = "자동 인식";
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop());
+      stream = null;
+    }
+    video.srcObject = null;
+    $("btnStart").textContent = "카메라 시작";
+    $("camMeta").textContent = "대기";
+    setStatus("준비됨");
+  }
+
+  $("btnStart").onclick = function () {
+    if (stream) stopCamera();
+    else startCamera();
+  };
+
+  $("btnScan").onclick = function () { scan(); };
+
+  $("btnAuto").onclick = function () {
+    looping = !looping;
+    $("btnAuto").classList.toggle("on", looping);
+    $("btnAuto").textContent = looping ? "자동 끄는 중" : "자동 인식";
+    setStatus(looping ? "자동 인식 중" : "일시정지", looping ? "live" : "");
+    if (looping) loop();
+  };
+
+  $("region").onchange = function () { regionBox(); };
+
+  $("file").onchange = function (e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    still.onload = function () {
+      usingStill = true;
+      video.style.display = "none";
+      still.style.display = "block";
+      hint.classList.add("hidden");
+      $("camMeta").textContent = "사진";
+      $("btnScan").disabled = false;
+      $("btnAuto").disabled = false;
+      scan();
+    };
+    still.src = url;
+  };
+
+  $("btnClear").onclick = function () {
+    lastText = "";
+    setBody($("enText"), "아직 인식된 문장이 없습니다.", true);
+    setBody($("koText"), "영어가 잡히면 바로 한국어로 보여줍니다.", true);
+    setBody($("wordBox"), "핵심 단어의 뜻과 품사가 여기에 뜹니다.", true);
+    setBody($("gramBox"), "시제, 조동사, 어순을 어떻게 읽으면 좋은지 알려줍니다.", true);
+    $("enMeta").textContent = "";
+  };
+
+  regionBox();
+  initOcr().catch(function () {
+    $("bootMsg").textContent = "인식 엔진을 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침 해 주세요.";
+  });
+})();
+</script>
 </body>
 </html>

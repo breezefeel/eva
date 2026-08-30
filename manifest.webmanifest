@@ -1,0 +1,19 @@
+{
+  "name": "영어 게임 실시간 번역",
+  "short_name": "게임영어번역",
+  "description": "카메라로 영어 게임 화면을 비추면 자막, 번역, 단어, 문법을 실시간으로 보여줍니다.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0B0F14",
+  "theme_color": "#0B0F14",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
