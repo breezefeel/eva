@@ -43,16 +43,19 @@
   .app {
     height: 100%;
     display: grid;
-    grid-template-rows: auto 1fr auto;
+    grid-template-rows: auto 1fr;
     gap: 0;
   }
-  header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 14px 8px; gap: 10px; border-bottom: 1px solid var(--line);
+  .chrome { border-bottom: 1px solid var(--line); background: #0E131A; }
+  .chrome-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; min-height: 36px;
   }
-  .brand { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .brand h1 { margin: 0; font-size: 15px; font-weight: 900; letter-spacing: -0.03em; }
-  .brand p { margin: 0; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chrome-bar strong {
+    margin: 0; font-size: 13px; font-weight: 900; letter-spacing: -0.03em;
+    min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .meta-count { font-size: 11px; color: var(--muted); font-weight: 700; }
   .status {
     font-size: 11px; font-weight: 700; padding: 5px 9px; border-radius: 999px;
     background: #1E2836; color: var(--muted); white-space: nowrap;
@@ -60,21 +63,22 @@
   .status.live { color: var(--ok); background: rgba(93,220,154,.12); }
   .status.busy { color: var(--en); background: rgba(244,213,141,.12); }
   .status.err { color: var(--danger); background: rgba(240,113,120,.12); }
+  .toolbar {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    padding: 0 10px 8px;
+  }
+  .chrome.collapsed .toolbar { display: none; }
 
   .stage {
     min-height: 0;
     display: grid;
     grid-template-columns: 1.15fr 1fr;
-    gap: 10px;
-    padding: 10px;
+    gap: 6px;
+    padding: 6px;
   }
   .cam-wrap, .board {
     min-height: 0; background: var(--panel); border: 1px solid var(--line);
-    border-radius: 16px; overflow: hidden; display: flex; flex-direction: column;
-  }
-  .cam-top {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: 11px; color: var(--muted);
+    border-radius: 10px; overflow: hidden; display: flex; flex-direction: column;
   }
   .cam-view { position: relative; flex: 1; min-height: 0; background: #05070A; }
   video, canvas#preview, img#still {
@@ -100,22 +104,11 @@
   .board { padding: 0; }
   .card {
     min-height: 0; display: flex; flex-direction: column;
-    border-bottom: 1px solid var(--line); padding: 10px 12px 8px;
+    border-bottom: 1px solid var(--line); padding: 8px 10px;
   }
   .card:last-child { border-bottom: none; }
   .card.ko { flex: 2 1 0; }
   .card.en { flex: 1 1 0; }
-  .label {
-    display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
-    margin-bottom: 6px;
-  }
-  .label span { opacity: .9; }
-  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-  .en .dot { background: var(--en); }
-  .ko .dot { background: var(--ko); }
-  .words .dot { background: var(--word); }
-  .gram .dot { background: var(--gram); }
   .body {
     flex: 1; min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch;
     font-size: 15px; line-height: 1.55;
@@ -184,10 +177,6 @@
     letter-spacing: .04em; color: var(--muted); margin: 0 0 5px;
   }
 
-  footer {
-    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
-    padding: 8px 10px 10px; border-top: 1px solid var(--line); background: #0E131A;
-  }
   button, select, label.file {
     appearance: none; border: 1px solid var(--line); background: var(--card); color: var(--text);
     border-radius: 10px; padding: 8px 10px; font: 700 12px/1 "Noto Sans KR", sans-serif;
@@ -216,7 +205,6 @@
     .stage { grid-template-columns: 1fr; grid-template-rows: 38vh 1fr; }
     .en .body { font-size: 14px; }
     .ko .body { font-size: 18px; }
-    .brand p { display: none; }
   }
 </style>
 </head>
@@ -228,56 +216,51 @@
 </div>
 
 <div class="app">
-  <header>
-    <div class="brand">
-      <h1>실시간 영어 번역기</h1>
-      <p>1초마다 화면을 보고, 영어가 바뀌면 바로 갈아끼웁니다</p>
+  <header class="chrome" id="chrome">
+    <div class="chrome-bar">
+      <strong>실시간 영어 번역기</strong>
+      <span class="status" id="status">준비 중</span>
+      <span class="meta-count" id="enMeta"></span>
+      <span id="camMeta" class="hidden">대기</span>
+      <button type="button" id="btnFold" aria-expanded="true">접기</button>
     </div>
-    <div class="status" id="status">준비 중</div>
+    <div class="toolbar" id="toolbar">
+      <button class="primary" id="btnStart" type="button">카메라 시작</button>
+      <button id="btnScan" type="button" disabled>지금 인식</button>
+      <button id="btnAuto" type="button" disabled>1초마다 인식</button>
+      <select id="region" aria-label="인식 영역">
+        <option value="center" selected>중앙만</option>
+        <option value="full">화면 전체</option>
+        <option value="bottom">하단만</option>
+        <option value="top">상단만</option>
+      </select>
+      <label class="file">사진 선택<input id="file" type="file" accept="image/*"></label>
+      <span class="grow"></span>
+      <button id="btnClear" type="button">지우기</button>
+    </div>
   </header>
 
   <main class="stage">
     <section class="cam-wrap">
-      <div class="cam-top">
-        <span>카메라 화면</span>
-        <span id="camMeta">대기</span>
-      </div>
       <div class="cam-view">
         <video id="video" playsinline muted autoplay></video>
         <img id="still" alt="선택한 사진">
-        <div class="roi full" id="roi"></div>
+        <div class="roi center" id="roi"></div>
         <div class="cam-hint" id="hint">
-          <strong>카메라 시작</strong>을 누르면 1초마다 영어를 읽습니다. 화면이 같으면 결과를 유지하고, 글자가 바뀌면 바로 갱신합니다.
+          <strong>카메라 시작</strong> 후 <strong>지금 인식</strong>을 누르면 노란 점선 안의 영어를 읽습니다. 계속 보려면 <strong>1초마다 인식</strong>을 켜세요.
         </div>
       </div>
     </section>
 
     <aside class="board" id="board">
       <section class="card ko">
-        <div class="label"><span><i class="dot"></i>한글 번역</span><span id="enMeta"></span></div>
         <div class="body placeholder" id="koText">영어가 잡히면 바로 한국어로 보여줍니다. 단어·문법은 문장 옆 버튼을 누르세요.</div>
       </section>
       <section class="card en">
-        <div class="label"><span><i class="dot"></i>영어</span></div>
         <div class="body placeholder" id="enText">아직 인식된 문장이 없습니다. 여러 문장이면 한 줄씩 나눠집니다.</div>
       </section>
     </aside>
   </main>
-
-  <footer>
-    <button class="primary" id="btnStart" type="button">카메라 시작</button>
-    <button id="btnScan" type="button" disabled>지금 인식</button>
-    <button id="btnAuto" type="button" disabled>1초마다 인식</button>
-    <select id="region" aria-label="인식 영역">
-      <option value="full" selected>화면 전체</option>
-      <option value="bottom">하단만</option>
-      <option value="center">중앙만</option>
-      <option value="top">상단만</option>
-    </select>
-    <label class="file">사진 선택<input id="file" type="file" accept="image/*"></label>
-    <span class="grow"></span>
-    <button id="btnClear" type="button">지우기</button>
-  </footer>
 </div>
 
 <div class="sheet hidden" id="sheet" hidden>
@@ -361,8 +344,12 @@
   let lastFrameSig = null;
   let lastPsm = "";
   let analyzeTick = 0;
+  let analyzing = false;
   let lastPack = [];
   let usingStill = false;
+  let lastFileUrl = "";
+  let pauseForHidden = false;
+  const inflightKo = new Map();
   const scratch = document.createElement("canvas");
 
   function setStatus(text, kind) {
@@ -454,13 +441,6 @@
       }
     }
     return out;
-  }
-
-  function screenChanged(prev, next) {
-    if (!prev || !next || prev.length !== next.length) return true;
-    let diff = 0;
-    for (let i = 0; i < prev.length; i++) if (prev[i] !== next[i]) diff++;
-    return diff / prev.length > 0.07;
   }
 
   function cropAndScaleInk(ctx, w, h) {
@@ -586,11 +566,31 @@
       .filter((s) => s.length >= 2 && isEnglishy(s));
   }
 
+  function ocrLines(result) {
+    if (result.data.lines && result.data.lines.length) return result.data.lines;
+    const lines = [];
+    (result.data.blocks || []).forEach(function (b) {
+      (b.paragraphs || []).forEach(function (p) {
+        (p.lines || []).forEach(function (l) { lines.push(l); });
+      });
+    });
+    return lines;
+  }
+
+  function isNoiseLine(s) {
+    const t = String(s || "").trim();
+    if (!t) return true;
+    if (/^\d+([.,:]\d+)?%?$/.test(t)) return true;
+    if (/^(hp|mp|lv|lvl|exp|ok|x|l|i)$/i.test(t)) return true;
+    if (t.length < 4 && !/\s/.test(t)) return true;
+    return false;
+  }
+
   function extractSentences(result) {
-    const lines = (result.data.lines || [])
+    const lines = ocrLines(result)
       .filter((l) => (l.confidence || 0) >= 32)
       .map((l) => tidyLine(l.text || ""))
-      .filter((s) => s.length >= 2 && isEnglishy(s));
+      .filter((s) => s.length >= 2 && isEnglishy(s) && !isNoiseLine(s));
     const collected = [];
     for (const line of lines) {
       const bits = splitPunct(line);
@@ -599,14 +599,15 @@
     }
     const out = [];
     for (const s of collected) {
+      if (isNoiseLine(s)) continue;
       if (out.some((x) => sameScreenText(x, s) || similar(x, s))) continue;
       out.push(s);
     }
     if (out.length) return out.slice(0, 12);
     const blob = tidyLine(result.data.text || "");
-    const punct = splitPunct(blob);
+    const punct = splitPunct(blob).filter(function (s) { return !isNoiseLine(s); });
     if (punct.length) return punct.slice(0, 12);
-    return blob && isEnglishy(blob) ? [blob] : [];
+    return blob && isEnglishy(blob) && !isNoiseLine(blob) ? [blob] : [];
   }
 
   function similar(a, b) {
@@ -694,20 +695,89 @@
     return hasHangul(t) ? t.replace(/MYMEMORY WARNING:.*/i, "").trim() : "";
   }
 
+  function todayStamp() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  let mmBlocked = false;
+  try {
+    const q = JSON.parse(localStorage.getItem("eva_mm_quota") || "{}");
+    mmBlocked = !!(q.done && q.day === todayStamp());
+  } catch (e) {}
+
+  function markMmQuota() {
+    mmBlocked = true;
+    try { localStorage.setItem("eva_mm_quota", JSON.stringify({ day: todayStamp(), done: 1 })); } catch (e) {}
+  }
+
+  function failKoMsg() {
+    if (mmBlocked) return "오늘 무료 번역 횟수를 다 썼습니다. 이미 본 문장은 저장본으로 보이고, 새 문장은 내일 다시 됩니다.";
+    return "번역 서버에 연결하지 못했습니다. 잠시 후 다시 비춰 주세요.";
+  }
+
+  async function fetchJson(url, ms) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(function () { ctrl.abort(); }, ms || 8000);
+    try {
+      const r = await fetch(url, { signal: ctrl.signal });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch (e) {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function parseGooglePayload(j) {
+    if (!j) return "";
+    if (Array.isArray(j) && Array.isArray(j[0])) {
+      return j[0].map(function (x) { return x && x[0]; }).join("");
+    }
+    if (Array.isArray(j) && typeof j[0] === "string") return j[0];
+    if (j.sentences) return j.sentences.map(function (s) { return s.trans || ""; }).join("");
+    return "";
+  }
+
   async function fetchGoogleKo(text) {
     const q = encodeURIComponent(text.slice(0, 450));
     const urls = [
       "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ko&dt=t&q=" + q,
-      "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ko&dt=t&q=" + q
+      "https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=en&tl=ko&q=" + q,
+      "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ko&dt=t&dj=1&q=" + q
     ];
     for (let i = 0; i < urls.length; i++) {
-      try {
-        const r = await fetch(urls[i]);
-        if (!r.ok) continue;
-        const j = await r.json();
-        const out = usableKo((j[0] || []).map(function (x) { return x[0]; }).join(""));
-        if (out) return out;
-      } catch (e) {}
+      const out = usableKo(parseGooglePayload(await fetchJson(urls[i], 6000)));
+      if (out) return out;
+    }
+    return "";
+  }
+
+  async function fetchMyMemoryKo(text) {
+    if (mmBlocked) return "";
+    const url = "https://api.mymemory.translated.net/get?langpair=en|ko&de=" +
+      encodeURIComponent("breezefeel@users.noreply.github.com") +
+      "&q=" + encodeURIComponent(text.slice(0, 450));
+    const j = await fetchJson(url, 9000);
+    if (!j) return "";
+    const raw = (j.responseData && j.responseData.translatedText) || "";
+    if (j.quotaFinished || /YOU USED ALL AVAILABLE|MYMEMORY WARNING/i.test(raw)) {
+      markMmQuota();
+      return "";
+    }
+    return usableKo(raw);
+  }
+
+  async function fetchSimplyKo(text) {
+    const hosts = [
+      "https://simplytranslate.org/api/translate?engine=google&from=en&to=ko&text=",
+      "https://st.privacyredirect.com/api/translate?engine=google&from=en&to=ko&text="
+    ];
+    for (let i = 0; i < hosts.length; i++) {
+      const j = await fetchJson(hosts[i] + encodeURIComponent(text.slice(0, 350)), 7000);
+      if (!j) continue;
+      const out = usableKo(j["translated-text"] || j.translated_text || j.translatedText || "");
+      if (out) return out;
     }
     return "";
   }
@@ -715,13 +785,10 @@
   async function fetchLingvaKo(text) {
     const hosts = ["https://lingva.ml", "https://lingva.garudalinux.org"];
     for (let i = 0; i < hosts.length; i++) {
-      try {
-        const r = await fetch(hosts[i] + "/api/v1/en/ko/" + encodeURIComponent(text.slice(0, 350)));
-        if (!r.ok) continue;
-        const j = await r.json();
-        const out = usableKo(j.translation || "");
-        if (out) return out;
-      } catch (e) {}
+      const j = await fetchJson(hosts[i] + "/api/v1/en/ko/" + encodeURIComponent(text.slice(0, 350)), 7000);
+      if (!j) continue;
+      const out = usableKo(j.translation || "");
+      if (out) return out;
     }
     return "";
   }
@@ -732,9 +799,19 @@
     if (hasHangul(t) && !isMostlyEnglish(t)) return t;
     const key = cacheKey(t);
     if (koCache.has(key)) return koCache.get(key);
-    const out = (await fetchGoogleKo(t)) || (await fetchLingvaKo(t)) || "";
-    if (out) rememberKo(t, out);
-    return out;
+    if (inflightKo.has(key)) return inflightKo.get(key);
+    const job = (async function () {
+      const out = (await fetchGoogleKo(t))
+        || (await fetchMyMemoryKo(t))
+        || (await fetchSimplyKo(t))
+        || (await fetchLingvaKo(t))
+        || "";
+      if (out) rememberKo(t, out);
+      inflightKo.delete(key);
+      return out;
+    })();
+    inflightKo.set(key, job);
+    return job;
   }
 
   function tokenize(text) {
@@ -757,7 +834,7 @@
     return w;
   }
 
-  async function wordMeanings(text, limit) {
+  function wordMeanings(text, limit) {
     const seen = new Set();
     const picks = [];
     const max = limit || 10;
@@ -768,22 +845,13 @@
       picks.push({ raw, key });
       if (picks.length >= max) break;
     }
-    const cards = [];
-    const unknown = [];
-    picks.forEach(function (p) {
+    return picks.map(function (p) {
       const local = LOCAL_DICT[p.key];
-      if (local) cards.push({ en: p.raw, ko: local[0], pos: local[1] });
-      else unknown.push(p);
-    });
-    if (unknown.length) {
-      const blob = await translateKo(unknown.map(function (p) { return p.key; }).join(", "));
-      const parts = blob ? blob.split(/\s*,\s*/) : [];
-      unknown.forEach(function (p, i) {
-        const ko = usableKo(parts[i] || "") || "";
-        if (ko) cards.push({ en: p.raw, ko: ko, pos: "" });
-      });
-    }
-    return cards;
+      if (local) return { en: p.raw, ko: local[0], pos: local[1] };
+      const cached = koCache.get(cacheKey(p.key));
+      if (cached && hasHangul(cached)) return { en: p.raw, ko: cached, pos: "" };
+      return null;
+    }).filter(Boolean);
   }
 
   function grammar(text, opt) {
@@ -958,25 +1026,30 @@
 
   async function analyze(sentences) {
     const tick = ++analyzeTick;
-    const numbered = sentences.length > 1;
-    $("enMeta").textContent = sentences.length + "문장";
-    lastPack = sentences.map((en) => ({ en: en, ko: "", words: [], gram: grammar(en, { compact: numbered }) }));
-    renderSentenceList($("enText"), sentences, true, false);
-    setBody($("koText"), "번역 중…", true);
+    analyzing = true;
+    try {
+      const numbered = sentences.length > 1;
+      $("enMeta").textContent = sentences.length + "문장";
+      lastPack = sentences.map(function (en) {
+        return {
+          en: en,
+          ko: koCache.get(cacheKey(en)) || "",
+          words: wordMeanings(en, numbered ? 6 : 10),
+          gram: grammar(en, { compact: numbered })
+        };
+      });
+      renderSentenceList($("enText"), sentences, false, false);
+      renderSentenceList($("koText"), lastPack.map(function (p) { return p.ko || "번역 중…"; }), true, true);
 
-    const kos = await Promise.all(sentences.map(translateKo));
-    if (tick !== analyzeTick) return;
-    kos.forEach(function (k, i) {
-      lastPack[i].ko = k || "번역을 불러오지 못했습니다. 네트워크를 확인한 뒤 다시 비춰 주세요.";
-    });
-    renderSentenceList($("koText"), lastPack.map(function (p) { return p.ko; }), true, false);
-    renderSentenceList($("enText"), sentences, true, false);
-
-    const wordGroups = await Promise.all(sentences.map((s) => wordMeanings(s, numbered ? 6 : 10)));
-    if (tick !== analyzeTick) return;
-    wordGroups.forEach(function (cards, i) { lastPack[i].words = cards; });
-    renderSentenceList($("koText"), lastPack.map(function (p) { return p.ko; }), true, true);
-    renderSentenceList($("enText"), sentences, true, true);
+      const kos = await Promise.all(sentences.map(translateKo));
+      if (tick !== analyzeTick) return;
+      kos.forEach(function (k, i) {
+        lastPack[i].ko = k || lastPack[i].ko || failKoMsg();
+      });
+      renderSentenceList($("koText"), lastPack.map(function (p) { return p.ko; }), true, true);
+    } finally {
+      if (tick === analyzeTick) analyzing = false;
+    }
   }
 
   async function scan() {
@@ -998,6 +1071,10 @@
       lastFrameSig = frame.sig;
       if (sameScreenText(text, lastText)) {
         setStatus("같은 화면 · 유지", "live");
+        return;
+      }
+      if (analyzing) {
+        setStatus("번역 중 · 화면 유지", "live");
         return;
       }
       lastText = text;
@@ -1029,31 +1106,29 @@
       return;
     }
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: {
-          facingMode: { ideal: "environment" },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-      });
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        });
+      } catch (e1) {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+      }
       video.srcObject = stream;
       await video.play();
       usingStill = false;
       still.style.display = "none";
       video.style.display = "block";
       hint.classList.add("hidden");
-      $("camMeta").textContent = "후면 카메라";
+      $("camMeta").textContent = "카메라";
       $("btnScan").disabled = false;
       $("btnAuto").disabled = false;
       $("btnStart").textContent = "카메라 끄기";
-      setStatus("1초마다 인식 중", "live");
-      if (!looping) {
-        looping = true;
-        $("btnAuto").classList.add("on");
-        $("btnAuto").textContent = "일시정지";
-        loop();
-      }
+      setStatus("카메라 켜짐 · 지금 인식을 누르세요", "live");
     } catch (err) {
       setStatus("카메라 권한을 허용해 주세요", "err");
     }
@@ -1061,6 +1136,7 @@
 
   function stopCamera() {
     looping = false;
+    pauseForHidden = false;
     $("btnAuto").classList.remove("on");
     $("btnAuto").textContent = "1초마다 인식";
     if (stream) {
@@ -1073,6 +1149,17 @@
     setStatus("준비됨");
   }
 
+  function applyFold(on) {
+    $("chrome").classList.toggle("collapsed", on);
+    $("btnFold").textContent = on ? "펼치기" : "접기";
+    $("btnFold").setAttribute("aria-expanded", on ? "false" : "true");
+    try { localStorage.setItem("eva_chrome_collapsed", on ? "1" : "0"); } catch (e) {}
+  }
+  $("btnFold").onclick = function () {
+    applyFold(!$("chrome").classList.contains("collapsed"));
+  };
+  try { if (localStorage.getItem("eva_chrome_collapsed") === "1") applyFold(true); } catch (e) {}
+
   $("btnStart").onclick = function () {
     if (stream) stopCamera();
     else startCamera();
@@ -1081,6 +1168,7 @@
   $("btnScan").onclick = function () { scan(); };
 
   $("btnAuto").onclick = function () {
+    pauseForHidden = false;
     looping = !looping;
     $("btnAuto").classList.toggle("on", looping);
     $("btnAuto").textContent = looping ? "일시정지" : "1초마다 인식";
@@ -1091,6 +1179,7 @@
   $("region").onchange = function () {
     regionBox();
     lastFrameSig = null;
+    lastText = "";
     lastPsm = "";
     if (worker) applyOcrMode("6");
   };
@@ -1098,7 +1187,9 @@
   $("file").onchange = function (e) {
     const f = e.target.files && e.target.files[0];
     if (!f) return;
+    if (lastFileUrl) URL.revokeObjectURL(lastFileUrl);
     const url = URL.createObjectURL(f);
+    lastFileUrl = url;
     still.onload = function () {
       usingStill = true;
       video.style.display = "none";
@@ -1121,8 +1212,29 @@
   $("sheet").onclick = function (e) {
     if (e.target === $("sheet")) closeSheet();
   };
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closeSheet();
+  });
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) {
+      if (looping) {
+        pauseForHidden = true;
+        looping = false;
+      }
+      return;
+    }
+    if (pauseForHidden && stream) {
+      pauseForHidden = false;
+      looping = true;
+      $("btnAuto").classList.add("on");
+      $("btnAuto").textContent = "일시정지";
+      loop();
+    }
+  });
 
   $("btnClear").onclick = function () {
+    analyzeTick += 1;
+    analyzing = false;
     lastText = "";
     lastFrameSig = null;
     lastPack = [];
