@@ -390,7 +390,7 @@
         if (m.status === "loading tesseract core") $("bootMsg").textContent = "인식 엔진 로딩 중…";
         if (m.status === "initializing tesseract") $("bootMsg").textContent = "엔진 초기화 중…";
         if (m.status === "loading language traineddata") $("bootMsg").textContent = "영어 데이터 받는 중…";
-        if (m.status === "recognizing text" && m.progress) {
+        if (m.status === "recognizing text" && m.progress && !lastText) {
           setStatus("인식 " + Math.round(m.progress * 100) + "%", "busy");
         }
       }
@@ -599,7 +599,7 @@
     }
     const out = [];
     for (const s of collected) {
-      if (out.some((x) => similar(x, s))) continue;
+      if (out.some((x) => sameScreenText(x, s) || similar(x, s))) continue;
       out.push(s);
     }
     if (out.length) return out.slice(0, 12);
@@ -621,23 +621,120 @@
     return same / Math.max(na.length, nb.length) > 0.86;
   }
 
-  async function translateKo(text) {
-    const q = encodeURIComponent(text.slice(0, 500));
-    try {
-      const r = await fetch("https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ko&dt=t&q=" + q);
-      if (r.ok) {
-        const j = await r.json();
-        const out = (j[0] || []).map((x) => x[0]).join("");
-        if (out) return out;
-      }
-    } catch (e) {}
-    try {
-      const r = await fetch("https://api.mymemory.translated.net/get?q=" + q + "&langpair=en|ko");
-      const j = await r.json();
-      return (j.responseData && j.responseData.translatedText) || "";
-    } catch (e) {
-      return "";
+  function normalizeForCompare(s) {
+    return String(s || "")
+      .toLowerCase()
+      .replace(/0/g, "o")
+      .replace(/1/g, "l")
+      .replace(/[^a-z\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function tokenJaccard(a, b) {
+    const A = new Set(normalizeForCompare(a).split(" ").filter(function (w) { return w.length >= 2; }));
+    const B = new Set(normalizeForCompare(b).split(" ").filter(function (w) { return w.length >= 2; }));
+    if (!A.size || !B.size) return 0;
+    let inter = 0;
+    A.forEach(function (w) { if (B.has(w)) inter++; });
+    return inter / (A.size + B.size - inter);
+  }
+
+  function sameScreenText(a, b) {
+    if (!a || !b) return false;
+    const na = normalizeForCompare(a);
+    const nb = normalizeForCompare(b);
+    if (!na || !nb) return false;
+    if (na === nb) return true;
+    if (similar(na, nb)) return true;
+    if (na.includes(nb) || nb.includes(na)) {
+      return Math.min(na.length, nb.length) / Math.max(na.length, nb.length) > 0.5;
     }
+    return tokenJaccard(a, b) >= 0.62;
+  }
+
+  function hasHangul(s) {
+    return /[\uAC00-\uD7A3]/.test(s || "");
+  }
+
+  function isMostlyEnglish(s) {
+    const t = String(s || "");
+    const letters = (t.match(/[A-Za-z]/g) || []).length;
+    const hangul = (t.match(/[\uAC00-\uD7A3]/g) || []).length;
+    return letters >= 3 && hangul < Math.max(2, letters * 0.3);
+  }
+
+  const koCache = new Map();
+  try {
+    const saved = JSON.parse(localStorage.getItem("eva_ko_cache") || "{}");
+    Object.keys(saved).forEach(function (k) { if (saved[k]) koCache.set(k, saved[k]); });
+  } catch (e) {}
+
+  function cacheKey(t) {
+    return String(t || "").toLowerCase().replace(/\s+/g, " ").trim();
+  }
+
+  function rememberKo(en, ko) {
+    if (!en || !ko) return;
+    koCache.set(cacheKey(en), ko);
+    try {
+      const obj = {};
+      let n = 0;
+      koCache.forEach(function (v, k) {
+        if (n < 400) { obj[k] = v; n++; }
+      });
+      localStorage.setItem("eva_ko_cache", JSON.stringify(obj));
+    } catch (e) {}
+  }
+
+  function usableKo(s) {
+    const t = String(s || "").trim();
+    if (!t || /mymemory|QUERY LENGTH LIMIT|INVALID LANGUAGE|YOU USED ALL AVAILABLE/i.test(t)) return "";
+    if (isMostlyEnglish(t)) return "";
+    return hasHangul(t) ? t.replace(/MYMEMORY WARNING:.*/i, "").trim() : "";
+  }
+
+  async function fetchGoogleKo(text) {
+    const q = encodeURIComponent(text.slice(0, 450));
+    const urls = [
+      "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ko&dt=t&q=" + q,
+      "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ko&dt=t&q=" + q
+    ];
+    for (let i = 0; i < urls.length; i++) {
+      try {
+        const r = await fetch(urls[i]);
+        if (!r.ok) continue;
+        const j = await r.json();
+        const out = usableKo((j[0] || []).map(function (x) { return x[0]; }).join(""));
+        if (out) return out;
+      } catch (e) {}
+    }
+    return "";
+  }
+
+  async function fetchLingvaKo(text) {
+    const hosts = ["https://lingva.ml", "https://lingva.garudalinux.org"];
+    for (let i = 0; i < hosts.length; i++) {
+      try {
+        const r = await fetch(hosts[i] + "/api/v1/en/ko/" + encodeURIComponent(text.slice(0, 350)));
+        if (!r.ok) continue;
+        const j = await r.json();
+        const out = usableKo(j.translation || "");
+        if (out) return out;
+      } catch (e) {}
+    }
+    return "";
+  }
+
+  async function translateKo(text) {
+    const t = String(text || "").trim();
+    if (!t) return "";
+    if (hasHangul(t) && !isMostlyEnglish(t)) return t;
+    const key = cacheKey(t);
+    if (koCache.has(key)) return koCache.get(key);
+    const out = (await fetchGoogleKo(t)) || (await fetchLingvaKo(t)) || "";
+    if (out) rememberKo(t, out);
+    return out;
   }
 
   function tokenize(text) {
@@ -671,11 +768,22 @@
       picks.push({ raw, key });
       if (picks.length >= max) break;
     }
-    return Promise.all(picks.map(async function (p) {
+    const cards = [];
+    const unknown = [];
+    picks.forEach(function (p) {
       const local = LOCAL_DICT[p.key];
-      if (local) return { en: p.raw, ko: local[0], pos: local[1] };
-      return { en: p.raw, ko: (await translateKo(p.key)) || p.key, pos: "" };
-    }));
+      if (local) cards.push({ en: p.raw, ko: local[0], pos: local[1] });
+      else unknown.push(p);
+    });
+    if (unknown.length) {
+      const blob = await translateKo(unknown.map(function (p) { return p.key; }).join(", "));
+      const parts = blob ? blob.split(/\s*,\s*/) : [];
+      unknown.forEach(function (p, i) {
+        const ko = usableKo(parts[i] || "") || "";
+        if (ko) cards.push({ en: p.raw, ko: ko, pos: "" });
+      });
+    }
+    return cards;
   }
 
   function grammar(text, opt) {
@@ -858,7 +966,9 @@
 
     const kos = await Promise.all(sentences.map(translateKo));
     if (tick !== analyzeTick) return;
-    kos.forEach(function (k, i) { lastPack[i].ko = k || "번역을 가져오지 못했습니다."; });
+    kos.forEach(function (k, i) {
+      lastPack[i].ko = k || "번역을 불러오지 못했습니다. 네트워크를 확인한 뒤 다시 비춰 주세요.";
+    });
     renderSentenceList($("koText"), lastPack.map(function (p) { return p.ko; }), true, false);
     renderSentenceList($("enText"), sentences, true, false);
 
@@ -873,29 +983,25 @@
     if (busy || !worker) return;
     const frame = grabFrame();
     if (!frame) return;
-    if (!screenChanged(lastFrameSig, frame.sig)) {
-      setStatus("화면 같음 · 유지", looping ? "live" : "");
-      return;
-    }
     busy = true;
-    setStatus("화면 읽는 중", "busy");
+    if (!lastText) setStatus("화면 읽는 중", "busy");
+    else setStatus("같은 화면인지 확인 중", "live");
     try {
       await applyOcrMode(frame.psm);
       const result = await worker.recognize(frame.canvas, {}, OCR_OUT);
       const sentences = extractSentences(result);
-      const text = sentences.join(" ");
       if (!sentences.length) {
-        if (lastText) lastFrameSig = frame.sig;
-        setStatus(looping ? "1초마다 보는 중" : "글자를 못 찾음", looping ? "live" : "");
+        setStatus(lastText ? "같은 화면 · 유지" : "글자를 못 찾음", lastText ? "live" : "");
         return;
       }
+      const text = sentences.join(" ");
       lastFrameSig = frame.sig;
-      if (similar(text, lastText)) {
-        setStatus("같은 문장 · 유지", looping ? "live" : "");
+      if (sameScreenText(text, lastText)) {
+        setStatus("같은 화면 · 유지", "live");
         return;
       }
       lastText = text;
-      setStatus(looping ? "새 문장 반영" : "인식 완료", looping ? "live" : "");
+      setStatus("새 화면 · 번역", "live");
       analyze(sentences);
     } catch (err) {
       setStatus("인식 오류", "err");
