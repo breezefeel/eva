@@ -1,7 +1,7 @@
 {
-  "name": "영어 게임 실시간 번역",
-  "short_name": "게임영어번역",
-  "description": "카메라로 영어 게임 화면을 비추면 자막, 번역, 단어, 문법을 실시간으로 보여줍니다.",
+  "name": "실시간 영어 번역기",
+  "short_name": "영어번역기",
+  "description": "카메라로 영어를 비추면 한글 번역, 단어 뜻, 문법을 실시간으로 보여줍니다.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
